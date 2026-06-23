@@ -1,5 +1,13 @@
 <template>
   <div class="job-form">
+    <div v-if="!canAccess" class="no-permission card">
+      <div class="np-icon">🔒</div>
+      <h3>无权限访问</h3>
+      <p>该功能需要招聘方或招聘负责人权限，请切换视角后再试。</p>
+      <button class="btn btn-primary" @click="switchToRecruiter">切换到招聘方视角</button>
+      <router-link to="/jobs" class="btn btn-secondary" style="margin-top:8px">返回职位列表</router-link>
+    </div>
+    <template v-else>
     <div class="page-header">
       <div class="header-left">
         <button class="btn btn-secondary btn-sm" @click="goBack">← 返回</button>
@@ -92,6 +100,7 @@
     <div v-if="isEdit" class="preview-tip card" style="margin-top:16px">
       <p class="tip-text">💡 提示：保存修改后，应聘者浏览职位页将立即看到最新内容。</p>
     </div>
+    </template>
   </div>
 </template>
 
@@ -99,12 +108,22 @@
 import { ref, reactive, onMounted, computed, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { jobApi } from '../services/api'
+import { ROLES } from '../composables/useRole'
 
 defineOptions({ name: 'JobFormView' })
 
 const route = useRoute()
 const router = useRouter()
 const toast = inject('toast')
+const role = inject('role')
+
+const canAccess = computed(() => (role?.canCreateJob?.value || role?.canEditJob?.value) || false)
+
+function switchToRecruiter() {
+  if (role?.setRole) {
+    role.setRole(ROLES.RECRUITER)
+  }
+}
 
 const isEdit = computed(() => !!route.params.id)
 const submitting = ref(false)
@@ -263,5 +282,37 @@ onMounted(loadJob)
   .form-row {
     grid-template-columns: 1fr;
   }
+}
+
+.no-permission {
+  text-align: center;
+  padding: 60px 20px;
+  max-width: 480px;
+  margin: 40px auto;
+}
+
+.no-permission .np-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.no-permission h3 {
+  font-size: 20px;
+  margin: 0 0 10px;
+  color: #333;
+}
+
+.no-permission p {
+  font-size: 14px;
+  color: #888;
+  margin: 0 0 20px;
+}
+
+.no-permission .btn {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  margin: 0 auto;
 }
 </style>

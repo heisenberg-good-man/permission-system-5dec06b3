@@ -2,32 +2,38 @@
   <div class="job-list">
     <div class="page-header">
       <div>
-        <h1>职位管理</h1>
+        <h1>{{ pageTitle }}</h1>
         <p class="page-subtitle">共 {{ jobs.length }} 个职位{{ currentFilterText ? `（${currentFilterText}）` : '' }}</p>
       </div>
       <div class="page-actions">
         <button class="btn btn-secondary btn-sm" @click="loadJobs" title="刷新">🔄</button>
-        <router-link to="/jobs/create" class="btn btn-primary">+ 发布职位</router-link>
+        <router-link v-if="canCreate" to="/jobs/create" class="btn btn-primary">+ 发布职位</router-link>
       </div>
     </div>
 
     <SearchFilter
-      placeholder="搜索职位名称、公司名称或岗位要求..."
+      :placeholder="searchPlaceholder"
       :show-location="true"
       :locations="locationOptions"
-      :show-status="true"
+      :show-status="showStatusFilter"
       :statuses="jobStatuses"
-      :init-status="initStatus"
+      :init-status="effectiveInitStatus"
       @filter="onFilter"
       @reset="onReset"
     />
 
-    <div v-if="loading" class="loading">加载中...</div>
+    <div v-if="loading" class="loading">
+      <div class="spinner"></div>
+      <span>加载职位中...</span>
+    </div>
     <div v-else-if="jobs.length === 0" class="empty card">
       <div class="empty-icon">🔍</div>
-      <p>没有匹配的职位</p>
+      <h3>没有匹配的职位</h3>
       <p class="empty-hint" v-if="hasFilter">请尝试调整搜索条件，或 <button class="link-btn" @click="resetFilter">重置筛选</button></p>
-      <router-link v-else to="/jobs/create" class="btn btn-primary btn-sm" style="margin-top:12px">发布第一个职位</router-link>
+      <template v-else>
+        <p v-if="isApplicant">当前暂无开放职位，敬请期待</p>
+        <router-link v-else to="/jobs/create" class="btn btn-primary btn-sm" style="margin-top:12px">发布第一个职位</router-link>
+      </template>
     </div>
     <div v-else class="job-grid">
       <div v-for="job in jobs" :key="job.id" class="job-card card" @click="openJob(job.id)">
@@ -49,9 +55,22 @@
         <div class="job-card-footer">
           <span class="job-card-time">发布于 {{ formatDate(job.createdAt) }}</span>
           <div class="job-card-actions">
-            <router-link :to="`/apply/${job.id}`" class="btn btn-primary btn-sm" @click.stop>
-              立即投递
-            </router-link>
+            <template v-if="isApplicant">
+              <router-link
+                v-if="job.status === 'open'"
+                :to="`/apply/${job.id}`"
+                class="btn btn-primary btn-sm"
+                @click.stop
+              >
+                立即投递
+              </router-link>
+              <span v-else class="tag status-closed">已关闭</span>
+            </template>
+            <template v-else>
+              <router-link :to="`/jobs/${job.id}`" class="btn btn-secondary btn-sm" @click.stop>
+                查看详情
+              </router-link>
+            </template>
           </div>
         </div>
         <div class="job-card-hover-bar" v-if="job.id === hoveredId"></div>
@@ -71,6 +90,7 @@ defineOptions({ name: 'JobListView' })
 const route = useRoute()
 const router = useRouter()
 const toast = inject('toast')
+const role = inject('role')
 
 const jobs = ref([])
 const loading = ref(false)
@@ -83,7 +103,21 @@ const jobStatuses = [
 
 let currentFilter = {}
 
+const isApplicant = computed(() => role?.isApplicant?.value || false)
+const canCreate = computed(() => role?.canCreateJob?.value || false)
+const showStatusFilter = computed(() => !isApplicant.value)
+
+const pageTitle = computed(() => isApplicant.value ? '职位大厅' : '职位管理')
+const searchPlaceholder = computed(() =>
+  isApplicant.value
+    ? '搜索职位名称、公司或工作地点...'
+    : '搜索职位名称、公司名称或岗位要求...'
+)
+
 const initStatus = computed(() => route.query.status || '')
+const effectiveInitStatus = computed(() =>
+  isApplicant.value ? 'open' : initStatus.value
+)
 
 const hasFilter = computed(() => {
   return !!currentFilter.keyword || !!currentFilter.location || !!currentFilter.status
@@ -145,8 +179,11 @@ async function loadJobs() {
     const params = {}
     if (currentFilter.keyword) params.keyword = currentFilter.keyword
     if (currentFilter.location) params.location = currentFilter.location
-    if (currentFilter.status) params.status = currentFilter.status
-    else if (initStatus.value) params.status = initStatus.value
+    if (currentFilter.status) {
+      params.status = currentFilter.status
+    } else if (effectiveInitStatus.value) {
+      params.status = effectiveInitStatus.value
+    }
     jobs.value = await jobApi.list(params)
   } catch (e) {
     console.error('加载职位失败:', e)
@@ -265,15 +302,41 @@ onActivated(loadJobs)
 }
 
 .loading {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   padding: 60px 20px;
   color: #999;
   font-size: 14px;
 }
 
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #e0e0e0;
+  border-top-color: #e94560;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .empty {
   text-align: center;
   padding: 60px 20px;
+}
+
+.empty h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  color: #555;
+}
+
+.empty p {
+  margin: 4px 0;
 }
 
 .empty-icon {

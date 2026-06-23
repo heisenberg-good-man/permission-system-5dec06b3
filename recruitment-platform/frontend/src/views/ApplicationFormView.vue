@@ -1,5 +1,13 @@
 <template>
   <div class="apply-form">
+    <div v-if="!canApply" class="no-permission card">
+      <div class="np-icon">🔒</div>
+      <h3>无权限访问</h3>
+      <p>请切换到应聘方视角后再投递简历。</p>
+      <button class="btn btn-primary" @click="switchToApplicant">切换到应聘方视角</button>
+      <router-link to="/jobs" class="btn btn-secondary" style="margin-top:8px">返回职位大厅</router-link>
+    </div>
+    <template v-else>
     <div class="page-header">
       <div class="header-left">
         <button class="btn btn-secondary btn-sm" @click="$router.back()">← 返回</button>
@@ -79,6 +87,7 @@
         </div>
       </form>
     </div>
+    </template>
   </div>
 </template>
 
@@ -86,12 +95,22 @@
 import { ref, computed, reactive, inject, onMounted, onActivated, defineOptions } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { jobApi, applicationApi } from '../services/api'
+import { ROLES } from '../composables/useRole'
 
 defineOptions({ name: 'ApplicationFormView' })
 
 const route = useRoute()
 const router = useRouter()
 const toast = inject('toast')
+const role = inject('role')
+
+const canApply = computed(() => role?.canApply?.value || false)
+
+function switchToApplicant() {
+  if (role?.setRole) {
+    role.setRole(ROLES.APPLICANT)
+  }
+}
 
 const job = ref(null)
 const jobError = ref(false)
@@ -167,10 +186,17 @@ async function submit() {
       localStorage.setItem('lastApplicantName', form.value.applicantName.trim())
     } catch (e) {}
 
-    toast.success('投递成功！正在跳转到投递管理...')
+    toast.success('投递成功！正在跳转到我的投递记录...')
     setTimeout(() => router.push('/applications'), 900)
   } catch (e) {
-    toast.error('投递失败：' + e.message)
+    const msg = e.message || ''
+    if (msg.includes('重复投递') || msg.includes('已向') || msg.includes('请勿重复')) {
+      toast.warning(msg)
+    } else if (msg.includes('已关闭')) {
+      toast.error(msg)
+    } else {
+      toast.error('投递失败：' + msg)
+    }
   } finally {
     submitting.value = false
   }
@@ -284,5 +310,37 @@ onActivated(loadJob)
   .form-row {
     grid-template-columns: 1fr;
   }
+}
+
+.no-permission {
+  text-align: center;
+  padding: 60px 20px;
+  max-width: 480px;
+  margin: 40px auto;
+}
+
+.no-permission .np-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.no-permission h3 {
+  font-size: 20px;
+  margin: 0 0 10px;
+  color: #333;
+}
+
+.no-permission p {
+  font-size: 14px;
+  color: #888;
+  margin: 0 0 20px;
+}
+
+.no-permission .btn {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  margin: 0 auto;
 }
 </style>

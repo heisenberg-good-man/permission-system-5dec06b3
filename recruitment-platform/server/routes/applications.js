@@ -3,13 +3,17 @@ const router = express.Router()
 const { applications, jobs, nextAppId } = require('../data/store')
 
 router.get('/', (req, res) => {
-  const { jobId, status, keyword } = req.query
+  const { jobId, status, keyword, applicantName } = req.query
   let result = [...applications]
   if (jobId) {
     result = result.filter(a => a.jobId === jobId)
   }
   if (status) {
     result = result.filter(a => a.status === status)
+  }
+  if (applicantName) {
+    const name = applicantName.toLowerCase().trim()
+    result = result.filter(a => a.applicantName.toLowerCase() === name)
   }
   if (keyword) {
     const kw = keyword.toLowerCase()
@@ -40,12 +44,29 @@ router.post('/', (req, res) => {
   }
   const job = jobs.find(j => j.id === jobId)
   if (!job) return res.status(400).json({ error: '目标岗位不存在' })
+  if (job.status !== 'open') {
+    return res.status(400).json({ error: '该职位已关闭，暂不接受投递' })
+  }
+
+  const trimmedName = String(applicantName).trim()
+  const existing = applications.find(a =>
+    a.jobId === jobId &&
+    a.applicantName.toLowerCase() === trimmedName.toLowerCase()
+  )
+  if (existing) {
+    return res.status(409).json({
+      error: `您已向「${job.title}」投递过简历，请勿重复投递`,
+      duplicate: true,
+      applicationId: existing.id
+    })
+  }
+
   const now = new Date().toISOString()
   const app = {
-    id: nextAppId,
+    id: nextAppId++,
     jobId,
-    applicantName,
-    contact,
+    applicantName: trimmedName,
+    contact: String(contact).trim(),
     targetPosition: targetPosition || job.title,
     resumeSummary: resumeSummary || '',
     skillTags: Array.isArray(skillTags) ? skillTags : [],

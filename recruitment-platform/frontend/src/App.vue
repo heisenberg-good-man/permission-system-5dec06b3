@@ -4,19 +4,24 @@
       <div class="sidebar-header">
         <h2>招聘平台</h2>
       </div>
+
+      <RoleSwitcher @change="onRoleChange" />
+
       <nav class="sidebar-nav">
-        <router-link to="/" class="nav-item" active-class="active">
-          <span class="nav-icon">📊</span>仪表盘
-        </router-link>
-        <router-link to="/jobs" class="nav-item" active-class="active">
-          <span class="nav-icon">💼</span>职位管理
-        </router-link>
-        <router-link to="/applications" class="nav-item" active-class="active">
-          <span class="nav-icon">📝</span>投递管理
-        </router-link>
+        <template v-for="item in visibleNavItems" :key="item.path">
+          <router-link
+            :to="item.path"
+            class="nav-item"
+            active-class="active"
+            :exact="item.exact"
+          >
+            <span class="nav-icon">{{ item.icon }}</span>{{ item.label }}
+          </router-link>
+        </template>
       </nav>
       <div class="sidebar-footer">
         <p v-if="lastRefresh" class="last-refresh">数据更新: {{ formatTime(lastRefresh) }}</p>
+        <p class="version-tip">前后端分离 · 本地 Mock 数据</p>
       </div>
     </aside>
     <main class="main-content">
@@ -33,15 +38,93 @@
 </template>
 
 <script setup>
-import { ref, provide } from 'vue'
+import { ref, provide, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import ToastContainer from './components/ToastContainer.vue'
+import RoleSwitcher from './components/RoleSwitcher.vue'
 import { useToast } from './composables/useToast'
+import { useRole } from './composables/useRole'
 
+const router = useRouter()
 const keepAliveComponents = ['DashboardView', 'JobListView', 'ApplicationListView']
 const toast = useToast()
 const lastRefresh = ref('')
 
+const role = useRole()
+provide('role', role)
 provide('toast', toast)
+
+const allNavItems = [
+  {
+    path: '/',
+    label: '仪表盘',
+    icon: '📊',
+    permission: 'dashboard',
+    exact: true,
+    defaultFor: ['manager']
+  },
+  {
+    path: '/jobs',
+    label: '职位大厅',
+    icon: '🔍',
+    permission: 'job:list',
+    exact: false,
+    defaultFor: ['applicant']
+  },
+  {
+    path: '/jobs',
+    label: '职位管理',
+    icon: '💼',
+    permission: 'job:create',
+    exact: false,
+    defaultFor: ['recruiter']
+  },
+  {
+    path: '/applications',
+    label: '投递管理',
+    icon: '📝',
+    permission: 'application:list',
+    exact: false,
+    defaultFor: []
+  }
+]
+
+const visibleNavItems = computed(() => {
+  const seen = new Set()
+  return allNavItems.filter(item => {
+    if (seen.has(item.path)) return false
+    if (!role.hasPermission(item.permission)) return false
+    seen.add(item.path)
+    if (role.isApplicant.value && item.path === '/jobs') {
+      return item.label === '职位大厅'
+    }
+    if ((role.isRecruiter.value || role.isManager.value) && item.path === '/jobs') {
+      return item.label === '职位管理'
+    }
+    return true
+  }).map(item => ({
+    ...item,
+    label: role.isApplicant.value && item.path === '/jobs' ? '职位大厅' : item.label,
+    icon: role.isApplicant.value && item.path === '/jobs' ? '🔍' : item.icon
+  }))
+})
+
+const defaultRoute = computed(() => {
+  if (role.isApplicant.value) return '/jobs'
+  if (role.isRecruiter.value) return '/applications'
+  return '/'
+})
+
+watch(() => role.role.value, (newRole, oldRole) => {
+  if (newRole !== oldRole) {
+    const target = defaultRoute.value
+    router.push(target).catch(() => {})
+  }
+}, { immediate: false })
+
+function onRoleChange(newRole) {
+  markRefreshed()
+}
 
 function formatTime(ts) {
   if (!ts) return ''
@@ -137,6 +220,12 @@ body {
 .last-refresh {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.4);
+}
+
+.version-tip {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.25);
+  margin-top: 4px;
 }
 
 .main-content {

@@ -1,9 +1,16 @@
 <template>
   <div class="application-detail">
+    <div v-if="!canView" class="no-permission card">
+      <div class="np-icon">🔒</div>
+      <h3>无权限访问</h3>
+      <p>该功能需要招聘方或招聘负责人权限。</p>
+      <router-link to="/jobs" class="btn btn-primary">返回职位大厅</router-link>
+    </div>
+    <template v-else>
     <div class="page-header">
       <div class="header-left">
         <button class="btn btn-secondary btn-sm" @click="$router.back()">← 返回列表</button>
-        <h1>候选人详情</h1>
+        <h1>{{ isApplicant ? '我的投递详情' : '候选人详情' }}</h1>
       </div>
       <div class="header-right" v-if="app.id">
         <span class="app-id-badge">投递编号 #{{ app.id }}</span>
@@ -12,7 +19,7 @@
 
     <div v-if="loading" class="loading">
       <div class="spinner"></div>
-      <span>加载候选人信息中...</span>
+      <span>加载投递信息中...</span>
     </div>
 
     <div v-else-if="loadError" class="error-box card">
@@ -28,11 +35,11 @@
               <div class="candidate-main">
                 <div class="avatar">{{ app.applicantName ? app.applicantName.charAt(0) : '?' }}</div>
                 <div class="candidate-meta">
-                  <h2>{{ app.applicantName }}</h2>
+                  <h2>{{ isApplicant ? '投递记录' : app.applicantName }}</h2>
                   <div class="sub-info">
                     <span class="target-pos">🎯 {{ app.targetPosition }}</span>
                     <span class="company">🏢 {{ app.company }}</span>
-                    <span class="years">💼 {{ app.workYears }}年经验</span>
+                    <span v-if="!isApplicant" class="years">💼 {{ app.workYears }}年经验</span>
                   </div>
                 </div>
               </div>
@@ -42,7 +49,7 @@
             </div>
 
             <div class="info-grid">
-              <div class="info-item">
+              <div class="info-item" v-if="!isApplicant">
                 <span class="info-label">📞 联系方式</span>
                 <span class="info-value contact-val">{{ app.contact }}</span>
               </div>
@@ -58,9 +65,13 @@
                 <span class="info-label">🏢 所属公司</span>
                 <span class="info-value">{{ app.company }}</span>
               </div>
+              <div class="info-item" v-if="!isApplicant">
+                <span class="info-label">💼 工作年限</span>
+                <span class="info-value">{{ app.workYears }}年</span>
+              </div>
             </div>
 
-            <div class="detail-section">
+            <div class="detail-section" v-if="!isApplicant">
               <h3>🛠️ 技能标签</h3>
               <div class="tags-row">
                 <span v-for="tag in app.skillTags" :key="tag" class="tag tag-blue">{{ tag }}</span>
@@ -68,12 +79,12 @@
               </div>
             </div>
 
-            <div class="detail-section">
+            <div class="detail-section" v-if="!isApplicant">
               <h3>📄 简历摘要</h3>
               <p class="resume-text">{{ app.resumeSummary || '候选人未提供简历摘要' }}</p>
             </div>
 
-            <div class="detail-section status-section">
+            <div v-if="!isApplicant" class="detail-section status-section">
               <h3>🔄 候选人状态流转</h3>
               <p class="section-desc">点击下方按钮选择目标状态，然后点击「确认更新」完成流转</p>
               <StatusSelector
@@ -95,6 +106,26 @@
                 </button>
               </div>
             </div>
+
+            <div v-else class="detail-section status-section">
+              <h3>📌 状态说明</h3>
+              <p class="section-desc">当前处理进度由招聘方更新，您可随时在此查看</p>
+              <div class="status-timeline">
+                <div
+                  v-for="(item, idx) in statusTimeline"
+                  :key="item.value"
+                  class="tl-item"
+                  :class="{ active: isStatusActive(item.value), done: isStatusDone(item.value) }"
+                >
+                  <div class="tl-dot">{{ item.icon }}</div>
+                  <div class="tl-content">
+                    <div class="tl-label">{{ item.label }}</div>
+                    <div class="tl-desc">{{ item.desc }}</div>
+                  </div>
+                  <div v-if="idx < statusTimeline.length - 1" class="tl-line"></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -106,18 +137,19 @@
             </div>
             <MessageBoard
               :application-id="app.id"
-              default-role="recruiter"
+              :default-role="isApplicant ? 'applicant' : 'recruiter'"
               @sent="onMsgSent"
             />
           </div>
         </div>
       </div>
     </template>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { ref, inject, onMounted, onActivated, defineOptions, watch, nextTick } from 'vue'
+import { ref, inject, onMounted, onActivated, defineOptions, watch, nextTick, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import StatusSelector from '../components/StatusSelector.vue'
 import MessageBoard from '../components/MessageBoard.vue'
@@ -127,7 +159,15 @@ defineOptions({ name: 'ApplicationDetailView' })
 
 const route = useRoute()
 const toast = inject('toast')
+const role = inject('role')
 const markRefreshed = inject('markRefreshed', () => {})
+
+const isApplicant = computed(() => role?.isApplicant?.value || false)
+const canView = computed(() =>
+  role?.canViewApplications?.value ||
+  isApplicant.value ||
+  false
+)
 
 const app = ref({ skillTags: [] })
 const loading = ref(true)
@@ -143,7 +183,22 @@ const statusLabels = {
   rejected: '❌ 不合适'
 }
 
+const statusTimeline = [
+  { value: 'pending', icon: '⏳', label: '待筛选', desc: '简历已提交，等待招聘方初步筛选' },
+  { value: 'contacted', icon: '💬', label: '已沟通', desc: '招聘方已联系您，正在初步沟通' },
+  { value: 'interviewing', icon: '🎯', label: '面试中', desc: '您已进入面试阶段，请按时参加' },
+  { value: 'rejected', icon: '❌', label: '不合适', desc: '很遗憾，本次未通过评估，感谢参与' }
+]
+
+const statusOrder = ['pending', 'contacted', 'interviewing', 'rejected']
+
 function statusLabel(s) { return statusLabels[s] || s }
+function isStatusActive(s) { return app.value.status === s }
+function isStatusDone(s) {
+  const curIdx = statusOrder.indexOf(app.value.status)
+  const sIdx = statusOrder.indexOf(s)
+  return sIdx < curIdx
+}
 
 async function loadApp() {
   loading.value = true
@@ -481,5 +536,125 @@ onActivated(loadApp)
     height: 560px;
     min-height: auto;
   }
+}
+
+.status-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.tl-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  position: relative;
+  padding-bottom: 16px;
+}
+
+.tl-item:last-child {
+  padding-bottom: 0;
+}
+
+.tl-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+  border: 2px solid transparent;
+  transition: all 0.3s;
+}
+
+.tl-item.active .tl-dot {
+  background: #fff0f3;
+  border-color: #e94560;
+  transform: scale(1.05);
+}
+
+.tl-item.done .tl-dot {
+  background: #e8f5e9;
+  border-color: #4caf50;
+  opacity: 0.7;
+}
+
+.tl-content {
+  flex: 1;
+  padding-top: 4px;
+}
+
+.tl-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #999;
+  margin-bottom: 2px;
+}
+
+.tl-item.active .tl-label {
+  color: #e94560;
+}
+
+.tl-item.done .tl-label {
+  color: #4caf50;
+}
+
+.tl-desc {
+  font-size: 12px;
+  color: #aaa;
+  line-height: 1.5;
+}
+
+.tl-item.active .tl-desc {
+  color: #666;
+}
+
+.tl-line {
+  position: absolute;
+  left: 17px;
+  top: 40px;
+  width: 2px;
+  height: calc(100% - 30px);
+  background: #e0e0e0;
+}
+
+.tl-item.done .tl-line {
+  background: #a5d6a7;
+}
+
+.no-permission {
+  text-align: center;
+  padding: 60px 20px;
+  max-width: 480px;
+  margin: 40px auto;
+}
+
+.no-permission .np-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.no-permission h3 {
+  font-size: 20px;
+  margin: 0 0 10px;
+  color: #333;
+}
+
+.no-permission p {
+  font-size: 14px;
+  color: #888;
+  margin: 0 0 20px;
+}
+
+.no-permission .btn {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  margin: 0 auto;
 }
 </style>

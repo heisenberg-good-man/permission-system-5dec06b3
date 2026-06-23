@@ -1,5 +1,20 @@
 <template>
   <div class="dashboard">
+    <div v-if="!canView" class="no-permission card">
+      <div class="np-icon">🔒</div>
+      <h3>无权限访问</h3>
+      <p>该功能需要招聘负责人权限，用于查看平台全局统计。</p>
+      <p class="np-hint">作为{{ isApplicant ? '应聘方' : '招聘方' }}，您可以：</p>
+      <template v-if="isApplicant">
+        <router-link to="/jobs" class="btn btn-primary" style="margin-bottom:8px">浏览职位</router-link>
+        <button class="btn btn-secondary" @click="switchToManager">切换为招聘负责人</button>
+      </template>
+      <template v-else>
+        <router-link to="/applications" class="btn btn-primary" style="margin-bottom:8px">管理候选人</router-link>
+        <button class="btn btn-secondary" @click="switchToManager">切换为招聘负责人</button>
+      </template>
+    </div>
+    <template v-else>
     <div class="page-header">
       <div>
         <h1>仪表盘</h1>
@@ -79,11 +94,12 @@
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onActivated, inject } from 'vue'
+import { ref, onMounted, onActivated, inject, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import StatsBar from '../components/StatsBar.vue'
 import { jobApi, applicationApi } from '../services/api'
@@ -92,7 +108,17 @@ defineOptions({ name: 'DashboardView' })
 
 const router = useRouter()
 const toast = inject('toast')
+const role = inject('role')
 const markRefreshed = inject('markRefreshed', () => {})
+
+const isApplicant = computed(() => role?.isApplicant?.value || false)
+const isManager = computed(() => role?.isManager?.value || false)
+const canView = computed(() => isManager.value || role?.canViewDashboard?.value || false)
+
+function switchToManager() {
+  role?.switchToManager?.()
+  toast?.success?.('已切换到招聘负责人视角')
+}
 
 const statsBar = ref(null)
 const recentJobs = ref([])
@@ -386,5 +412,43 @@ onActivated(refreshAll)
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.no-permission {
+  text-align: center;
+  padding: 60px 20px;
+  max-width: 480px;
+  margin: 40px auto;
+}
+
+.no-permission .np-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.no-permission h3 {
+  font-size: 20px;
+  margin: 0 0 10px;
+  color: #333;
+}
+
+.no-permission p {
+  font-size: 14px;
+  color: #888;
+  margin: 0 0 12px;
+}
+
+.no-permission .np-hint {
+  color: #e94560;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.no-permission .btn {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  margin: 0 auto;
 }
 </style>

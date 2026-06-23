@@ -1,14 +1,30 @@
 <template>
   <div class="application-list">
+    <div v-if="!canView" class="no-permission card">
+      <div class="np-icon">🔒</div>
+      <h3>无权限访问</h3>
+      <p>该功能需要招聘方或招聘负责人权限。</p>
+      <p v-if="isApplicant" class="np-hint">作为应聘方，您可以查看自己的投递记录。</p>
+      <button v-if="isApplicant" class="btn btn-primary" @click="loadForApplicant">查看我的投递</button>
+      <router-link to="/jobs" class="btn btn-secondary" style="margin-top:8px">返回职位大厅</router-link>
+    </div>
+    <template v-else>
     <div class="page-header">
       <div class="header-left">
-        <h1>投递管理</h1>
-        <span class="subtitle" v-if="!loading">共 {{ applications.length }} 条投递记录</span>
+        <h1>{{ pageTitle }}</h1>
+        <span class="subtitle" v-if="!loading">共 {{ applications.length }} 条{{ isApplicant ? '我的' : '' }}投递记录</span>
       </div>
       <div class="header-right">
         <button class="btn btn-secondary btn-sm" @click="refresh" :disabled="loading">
           <span v-if="loading">刷新中...</span>
           <span v-else>🔄 刷新</span>
+        </button>
+        <button
+          v-if="isApplicant && !filterByMe"
+          class="btn btn-primary btn-sm"
+          @click="filterByMe = true; loadApplications()"
+        >
+          只看我的
         </button>
       </div>
     </div>
@@ -37,18 +53,22 @@
       <div class="empty-icon">📭</div>
       <h3>暂无匹配的投递记录</h3>
       <p v-if="hasFilter">尝试调整筛选条件，或 <button class="link-btn" @click="clearFilter">清除筛选</button></p>
-      <p v-else>发布职位后，候选人将在此处投递简历。</p>
+      <template v-else>
+        <p v-if="isApplicant">您还没有投递过任何职位。</p>
+        <router-link v-if="isApplicant" to="/jobs" class="btn btn-primary btn-sm" style="margin-top:8px">去浏览职位</router-link>
+        <p v-else>发布职位后，候选人将在此处投递简历。</p>
+      </template>
     </div>
 
     <div v-else class="app-table-wrap card">
       <table class="app-table">
         <thead>
           <tr>
-            <th>候选人</th>
+            <th v-if="!isApplicant">候选人</th>
             <th>目标职位</th>
             <th>公司</th>
-            <th>工作年限</th>
-            <th>技能标签</th>
+            <th v-if="!isApplicant">工作年限</th>
+            <th v-if="!isApplicant">技能标签</th>
             <th>状态</th>
             <th>投递时间</th>
             <th>操作</th>
@@ -56,13 +76,13 @@
         </thead>
         <tbody>
           <tr v-for="app in applications" :key="app.id" class="app-row" @click="goDetail(app.id)">
-            <td>
+            <td v-if="!isApplicant">
               <span class="applicant-name">{{ app.applicantName }}</span>
             </td>
             <td>{{ app.targetPosition }}</td>
             <td>{{ app.company }}</td>
-            <td>{{ app.workYears }}年</td>
-            <td @click.stop>
+            <td v-if="!isApplicant">{{ app.workYears }}年</td>
+            <td v-if="!isApplicant" @click.stop>
               <span v-for="tag in app.skillTags.slice(0, 3)" :key="tag" class="tag tag-blue">{{ tag }}</span>
               <span v-if="app.skillTags.length > 3" class="more-tags">+{{ app.skillTags.length - 3 }}</span>
               <span v-if="app.skillTags.length === 0" class="no-tags">—</span>
@@ -70,12 +90,15 @@
             <td><span class="tag" :class="`status-${app.status}`">{{ statusLabel(app.status) }}</span></td>
             <td class="time-cell">{{ formatDate(app.createdAt) }}</td>
             <td @click.stop>
-              <router-link :to="`/applications/${app.id}`" class="btn btn-primary btn-sm">查看详情</router-link>
+              <router-link :to="`/applications/${app.id}`" class="btn btn-primary btn-sm">
+                {{ isApplicant ? '查看详情' : '查看详情' }}
+              </router-link>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
+    </template>
   </div>
 </template>
 
@@ -90,7 +113,17 @@ defineOptions({ name: 'ApplicationListView' })
 const route = useRoute()
 const router = useRouter()
 const toast = inject('toast')
+const role = inject('role')
 const filterRef = ref(null)
+
+const isApplicant = computed(() => role?.isApplicant?.value || false)
+const canView = computed(() =>
+  role?.canViewApplications?.value ||
+  isApplicant.value ||
+  false
+)
+const filterByMe = ref(isApplicant.value)
+const pageTitle = computed(() => isApplicant.value ? '我的投递' : '投递管理')
 
 const applications = ref([])
 const loading = ref(true)
@@ -119,6 +152,19 @@ function statusLabel(s) { return statusLabels[s] || s }
 
 let currentFilter = {}
 
+function getCurrentApplicantName() {
+  try {
+    return localStorage.getItem('lastApplicantName') || ''
+  } catch (e) {
+    return ''
+  }
+}
+
+function loadForApplicant() {
+  filterByMe.value = true
+  loadApplications()
+}
+
 async function loadApplications() {
   loading.value = true
   loadError.value = ''
@@ -126,6 +172,10 @@ async function loadApplications() {
     const params = {}
     if (currentFilter.keyword) params.keyword = currentFilter.keyword
     if (currentFilter.status) params.status = currentFilter.status
+    if (filterByMe.value) {
+      const name = getCurrentApplicantName()
+      if (name) params.applicantName = name
+    }
     applications.value = await applicationApi.list(params)
   } catch (e) {
     loadError.value = e.message
@@ -331,5 +381,42 @@ onActivated(loadApplications)
 
 .link-btn:hover {
   color: #c73653;
+}
+
+.no-permission {
+  text-align: center;
+  padding: 60px 20px;
+  max-width: 480px;
+  margin: 40px auto;
+}
+
+.no-permission .np-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.no-permission h3 {
+  font-size: 20px;
+  margin: 0 0 10px;
+  color: #333;
+}
+
+.no-permission p {
+  font-size: 14px;
+  color: #888;
+  margin: 0 0 12px;
+}
+
+.no-permission .np-hint {
+  color: #e94560;
+  font-size: 13px;
+}
+
+.no-permission .btn {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  margin: 0 auto;
 }
 </style>

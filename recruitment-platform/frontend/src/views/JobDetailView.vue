@@ -9,8 +9,15 @@
         </div>
       </div>
       <div class="header-actions" v-if="job">
-        <router-link :to="`/jobs/${job.id}/edit`" class="btn btn-secondary btn-sm">✎ 编辑</router-link>
-        <router-link :to="`/apply/${job.id}`" class="btn btn-primary btn-sm">投递简历</router-link>
+        <router-link v-if="canEdit" :to="`/jobs/${job.id}/edit`" class="btn btn-secondary btn-sm">✎ 编辑</router-link>
+        <router-link
+          v-if="canApply && job.status === 'open'"
+          :to="`/apply/${job.id}`"
+          class="btn btn-primary btn-sm"
+        >
+          投递简历
+        </router-link>
+        <span v-if="job.status === 'closed'" class="tag status-closed" style="margin-left:8px">🔒 已关闭</span>
       </div>
     </div>
 
@@ -63,11 +70,25 @@
 
           <div class="detail-section quick-actions">
             <button class="btn btn-secondary btn-sm" @click="loadData">🔄 刷新</button>
-            <router-link :to="`/apply/${job.id}`" class="btn btn-primary btn-sm">📝 我要投递</router-link>
+            <router-link
+              v-if="canApply && job.status === 'open'"
+              :to="`/apply/${job.id}`"
+              class="btn btn-primary btn-sm"
+            >
+              📝 我要投递
+            </router-link>
+            <button
+              v-if="!canApply && job.status === 'open'"
+              class="btn btn-secondary btn-sm"
+              disabled
+              title="请切换到应聘方视角投递"
+            >
+              🔒 请切换到应聘方视角投递
+            </button>
           </div>
         </div>
 
-        <div class="card detail-sidebar">
+        <div v-if="showSidebar" class="card detail-sidebar">
           <div class="app-section-head">
             <h3>📥 该职位投递</h3>
             <span class="app-badge" :class="appList.length ? 'has' : ''">{{ appList.length }} 份</span>
@@ -127,7 +148,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onActivated, inject } from 'vue'
+import { ref, onMounted, onActivated, inject, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { jobApi, applicationApi } from '../services/api'
 
@@ -136,6 +157,12 @@ defineOptions({ name: 'JobDetailView' })
 const route = useRoute()
 const router = useRouter()
 const toast = inject('toast')
+const role = inject('role')
+
+const isApplicant = computed(() => role?.isApplicant?.value || false)
+const canEdit = computed(() => role?.canEditJob?.value || false)
+const canApply = computed(() => role?.canApply?.value || false)
+const showSidebar = computed(() => !isApplicant.value)
 
 const job = ref(null)
 const appList = ref([])
