@@ -1,0 +1,13 @@
+{
+  "name": "recruitment-platform",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:server": "cd server && npm.cmd install",
+    "install:frontend": "cd frontend && npm.cmd install",
+    "install:all": "npm.cmd run install:server && npm.cmd run install:frontend",
+    "dev:server": "cd server && node index.js",
+    "dev:frontend": "cd frontend && npx.cmd vite",
+    "dev": "echo 请分别在两个终端运行 npm.cmd run dev:server 和 npm.cmd run dev:frontend"
+  }
+}
