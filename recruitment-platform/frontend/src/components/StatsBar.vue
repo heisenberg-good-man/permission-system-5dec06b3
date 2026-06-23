@@ -1,53 +1,65 @@
 <template>
   <div class="stats-bar">
-    <div class="stat-card">
+    <div class="stat-card" @click="onJump('jobs')" title="点击查看所有职位">
       <div class="stat-icon" style="background:#e6f7ff;color:#1890ff;">📋</div>
       <div class="stat-info">
         <div class="stat-value">{{ stats.openPositions }}</div>
         <div class="stat-label">开放职位</div>
       </div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" @click="onJump('apps')" title="点击查看今日投递">
       <div class="stat-icon" style="background:#fff7e6;color:#fa8c16;">📝</div>
       <div class="stat-info">
-        <div class="stat-value">{{ stats.todayNewApplications }}</div>
+        <div class="stat-value pulse" v-if="stats.todayNewApplications > 0">{{ stats.todayNewApplications }}</div>
+        <div class="stat-value" v-else>{{ stats.todayNewApplications }}</div>
         <div class="stat-label">今日新增投递</div>
       </div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" @click="onJump('apps', 'pending')" title="点击筛选待筛选">
       <div class="stat-icon" style="background:#fff1f0;color:#f5222d;">⏳</div>
       <div class="stat-info">
         <div class="stat-value">{{ stats.pendingCandidates }}</div>
         <div class="stat-label">待筛选候选人</div>
       </div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" @click="onJump('apps', 'contacted')" title="点击筛选已沟通">
       <div class="stat-icon" style="background:#f9f0ff;color:#722ed1;">💬</div>
       <div class="stat-info">
         <div class="stat-value">{{ stats.contactedCount }}</div>
         <div class="stat-label">已沟通人数</div>
       </div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" @click="onJump('apps', 'interviewing')" title="点击筛选面试中">
       <div class="stat-icon" style="background:#f6ffed;color:#52c41a;">🎯</div>
       <div class="stat-info">
         <div class="stat-value">{{ stats.interviewingCount }}</div>
         <div class="stat-label">面试中</div>
       </div>
     </div>
-    <div class="stat-card">
-      <div class="stat-icon" style="background:#f5f5f5;color:#999;">📊</div>
+    <div class="stat-card" @click="onJump('apps')" title="点击查看所有投递">
+      <div class="stat-icon" style="background:#f5f5f5;color:#666;">📊</div>
       <div class="stat-info">
         <div class="stat-value">{{ stats.totalApplications }}</div>
         <div class="stat-label">总投递数</div>
       </div>
     </div>
   </div>
+  <div v-if="loadError" class="stats-error">
+    ⚠️ 统计数据加载失败，<span @click="loadStats" class="retry-link">点击重试</span>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onActivated, inject } from 'vue'
+import { useRouter } from 'vue-router'
 import { statsApi } from '../services/api'
+
+defineOptions({ name: 'StatsBar' })
+
+const router = useRouter()
+const toast = inject('toast')
+const markRefreshed = inject('markRefreshed', () => {})
+const emit = defineEmits(['updated'])
 
 const stats = ref({
   openPositions: 0,
@@ -56,20 +68,37 @@ const stats = ref({
   contactedCount: 0,
   interviewingCount: 0,
   rejectedCount: 0,
-  totalApplications: 0
+  totalApplications: 0,
+  statusBreakdown: {}
 })
 
-async function loadStats() {
-  try {
-    stats.value = await statsApi.get()
-  } catch (e) {
-    console.error('加载统计失败:', e)
+const loadError = ref(false)
+
+function onJump(target, status) {
+  if (target === 'jobs') {
+    router.push('/jobs')
+  } else if (target === 'apps') {
+    router.push(status ? { path: '/applications', query: { status } } : '/applications')
   }
 }
 
-onMounted(loadStats)
+async function loadStats(silent = false) {
+  loadError.value = false
+  try {
+    stats.value = await statsApi.get()
+    markRefreshed()
+    emit('updated')
+  } catch (e) {
+    console.error('加载统计失败:', e)
+    loadError.value = true
+    if (!silent && toast) toast.error('统计数据加载失败')
+  }
+}
 
-defineExpose({ loadStats })
+onMounted(() => loadStats())
+onActivated(() => loadStats())
+
+defineExpose({ loadStats, stats })
 </script>
 
 <style scoped>
@@ -77,39 +106,75 @@ defineExpose({ loadStats })
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .stat-card {
   background: #fff;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 16px;
   display: flex;
   align-items: center;
   gap: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #e94560;
 }
 
 .stat-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 22px;
   flex-shrink: 0;
 }
 
 .stat-value {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
   line-height: 1.2;
+  color: #1a1a2e;
+}
+
+.stat-value.pulse {
+  animation: pulse 2s ease-in-out infinite;
+  color: #e94560;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
 }
 
 .stat-label {
   font-size: 13px;
-  color: #999;
+  color: #888;
   margin-top: 2px;
+}
+
+.stats-error {
+  margin-bottom: 16px;
+  padding: 10px 16px;
+  background: #fff7e6;
+  border: 1px solid #ffd591;
+  color: #d46b08;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.retry-link {
+  color: #e94560;
+  text-decoration: underline;
+  cursor: pointer;
 }
 </style>

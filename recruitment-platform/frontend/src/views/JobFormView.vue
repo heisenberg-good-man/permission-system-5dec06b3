@@ -2,33 +2,39 @@
   <div class="job-form">
     <div class="page-header">
       <div class="header-left">
-        <button class="btn btn-secondary btn-sm" @click="$router.back()">← 返回</button>
-        <h1>{{ isEdit ? '编辑职位' : '发布职位' }}</h1>
+        <button class="btn btn-secondary btn-sm" @click="goBack">← 返回</button>
+        <div>
+          <h1>{{ isEdit ? '编辑职位' : '发布新职位' }}</h1>
+          <p class="page-subtitle" v-if="isEdit">修改职位信息，保存后立即生效</p>
+          <p class="page-subtitle" v-else>填写职位信息，发布后应聘者可查看并投递</p>
+        </div>
       </div>
     </div>
 
     <div class="card form-card">
-      <form @submit.prevent="submit">
+      <form @submit.prevent="submit" novalidate>
         <div class="form-row">
           <div class="form-group">
-            <label>职位名称 *</label>
-            <input v-model="form.title" type="text" placeholder="如：高级前端工程师" required />
+            <label class="required" for="f_title">职位名称</label>
+            <input id="f_title" v-model="form.title" type="text" placeholder="如：高级前端工程师（Vue方向）" maxlength="60" />
+            <span v-if="formErrors.title" class="field-error">{{ formErrors.title }}</span>
           </div>
           <div class="form-group">
-            <label>公司名称 *</label>
-            <input v-model="form.company" type="text" placeholder="如：星辰科技有限公司" required />
+            <label class="required" for="f_company">公司名称</label>
+            <input id="f_company" v-model="form.company" type="text" placeholder="如：星辰科技有限公司" maxlength="60" />
+            <span v-if="formErrors.company" class="field-error">{{ formErrors.company }}</span>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label>部门</label>
-            <input v-model="form.department" type="text" placeholder="如：技术部" />
+            <label for="f_dept">所属部门</label>
+            <input id="f_dept" v-model="form.department" type="text" placeholder="如：技术部 · 前端组" maxlength="40" />
           </div>
           <div class="form-group">
-            <label>工作地点</label>
-            <select v-model="form.location">
-              <option value="">请选择</option>
+            <label for="f_loc">工作地点</label>
+            <select v-model="form.location" id="f_loc">
+              <option value="">请选择地点</option>
               <option v-for="loc in locations" :key="loc" :value="loc">{{ loc }}</option>
             </select>
           </div>
@@ -36,63 +42,73 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label>最低薪资（元/月）</label>
-            <input v-model.number="form.salaryMin" type="number" min="0" placeholder="如：15000" />
+            <label for="f_min">最低薪资（元/月）</label>
+            <input id="f_min" v-model.number="form.salaryMin" type="number" min="0" step="500" placeholder="如：15000" />
           </div>
           <div class="form-group">
-            <label>最高薪资（元/月）</label>
-            <input v-model.number="form.salaryMax" type="number" min="0" placeholder="如：25000" />
+            <label for="f_max">最高薪资（元/月）</label>
+            <input id="f_max" v-model.number="form.salaryMax" type="number" min="0" step="500" placeholder="如：25000" />
+            <span v-if="formErrors.salary" class="field-error">{{ formErrors.salary }}</span>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label>招聘人数</label>
-            <input v-model.number="form.headcount" type="number" min="1" placeholder="如：3" />
+            <label for="f_cnt">招聘人数</label>
+            <input id="f_cnt" v-model.number="form.headcount" type="number" min="1" max="100" placeholder="默认 1" />
           </div>
           <div class="form-group">
-            <label>招聘状态</label>
-            <select v-model="form.status">
-              <option value="open">招聘中</option>
-              <option value="closed">已关闭</option>
+            <label for="f_st">招聘状态</label>
+            <select v-model="form.status" id="f_st">
+              <option value="open">✅ 招聘中（可被投递）</option>
+              <option value="closed">🔒 已关闭（暂不招聘）</option>
             </select>
           </div>
         </div>
 
         <div class="form-group">
-          <label>岗位要求</label>
-          <textarea v-model="form.requirements" rows="5" placeholder="请输入岗位要求..."></textarea>
+          <label for="f_req">岗位要求</label>
+          <textarea id="f_req" v-model="form.requirements" rows="6" placeholder="请输入岗位要求，建议包含：
+1. 工作经验要求
+2. 技术栈或能力要求
+3. 加分项
+4. 工作职责说明"></textarea>
+          <p class="field-hint">支持多行，共 {{ form.requirements.length }} 字</p>
         </div>
 
         <div class="form-actions">
-          <button type="button" class="btn btn-secondary" @click="$router.back()">取消</button>
+          <button type="button" class="btn btn-secondary" @click="goBack">取消</button>
+          <div style="flex:1"></div>
+          <button type="button" class="btn btn-secondary btn-sm" @click="resetForm" :disabled="submitting">重置</button>
           <button type="submit" class="btn btn-primary" :disabled="submitting">
-            {{ submitting ? '提交中...' : (isEdit ? '保存修改' : '发布职位') }}
+            <span v-if="submitting">提交中...</span>
+            <span v-else-if="isEdit">保存修改</span>
+            <span v-else>📢 发布职位</span>
           </button>
         </div>
-
-        <div v-if="error" class="form-error">{{ error }}</div>
-        <div v-if="success" class="form-success">{{ success }}</div>
       </form>
+    </div>
+
+    <div v-if="isEdit" class="preview-tip card" style="margin-top:16px">
+      <p class="tip-text">💡 提示：保存修改后，应聘者浏览职位页将立即看到最新内容。</p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { jobApi } from '../services/api'
 
+defineOptions({ name: 'JobFormView' })
+
 const route = useRoute()
 const router = useRouter()
+const toast = inject('toast')
+
 const isEdit = computed(() => !!route.params.id)
 const submitting = ref(false)
-const error = ref('')
-const success = ref('')
-
-const locations = ['北京', '上海', '深圳', '广州', '杭州', '成都']
-
-const form = ref({
+const initialForm = {
   title: '',
   company: '',
   department: '',
@@ -102,54 +118,105 @@ const form = ref({
   headcount: 1,
   requirements: '',
   status: 'open'
-})
+}
+
+const form = reactive({ ...initialForm })
+const formErrors = reactive({ title: '', company: '', salary: '' })
+
+const locations = ['北京', '上海', '深圳', '广州', '杭州', '成都', '南京', '武汉', '西安', '其他']
+
+function resetForm() {
+  Object.assign(form, initialForm)
+  Object.keys(formErrors).forEach(k => formErrors[k] = '')
+}
+
+function validate() {
+  let ok = true
+  Object.keys(formErrors).forEach(k => formErrors[k] = '')
+  if (!form.title.trim()) {
+    formErrors.title = '请输入职位名称'
+    ok = false
+  } else if (form.title.trim().length < 2) {
+    formErrors.title = '职位名称至少 2 个字'
+    ok = false
+  }
+  if (!form.company.trim()) {
+    formErrors.company = '请输入公司名称'
+    ok = false
+  }
+  if (form.salaryMin && form.salaryMax && form.salaryMin > form.salaryMax) {
+    formErrors.salary = '最低薪资不能高于最高薪资'
+    ok = false
+  }
+  return ok
+}
 
 async function loadJob() {
   if (!isEdit.value) return
   try {
     const job = await jobApi.get(route.params.id)
-    form.value = {
+    Object.assign(form, {
       title: job.title,
       company: job.company,
-      department: job.department,
-      location: job.location,
-      salaryMin: job.salaryMin,
-      salaryMax: job.salaryMax,
-      headcount: job.headcount,
-      requirements: job.requirements,
-      status: job.status
-    }
+      department: job.department || '',
+      location: job.location || '',
+      salaryMin: job.salaryMin || null,
+      salaryMax: job.salaryMax || null,
+      headcount: job.headcount || 1,
+      requirements: job.requirements || '',
+      status: job.status || 'open'
+    })
   } catch (e) {
-    error.value = '加载职位失败: ' + e.message
+    if (toast) toast.error('加载职位信息失败: ' + e.message)
   }
 }
 
 async function submit() {
-  error.value = ''
-  success.value = ''
+  if (!validate()) {
+    if (toast) toast.warning('请完善表单必填项')
+    return
+  }
   submitting.value = true
   try {
     if (isEdit.value) {
-      await jobApi.update(route.params.id, form.value)
-      success.value = '职位更新成功！'
+      await jobApi.update(route.params.id, { ...form })
+      if (toast) toast.success('职位信息已更新')
+      setTimeout(() => router.push(`/jobs/${route.params.id}`), 500)
     } else {
-      const created = await jobApi.create(form.value)
-      success.value = '职位发布成功！'
-      setTimeout(() => router.push(`/jobs/${created.id}`), 800)
+      const created = await jobApi.create({ ...form })
+      if (toast) toast.success(`职位「${created.title}」发布成功`)
+      setTimeout(() => router.push(`/jobs/${created.id}`), 600)
     }
   } catch (e) {
-    error.value = e.message
+    if (toast) toast.error('提交失败: ' + e.message)
   } finally {
     submitting.value = false
   }
+}
+
+function goBack() {
+  if (window.history.length > 1) router.back()
+  else router.push('/jobs')
 }
 
 onMounted(loadJob)
 </script>
 
 <style scoped>
+.header-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: #999;
+  margin-top: 4px;
+}
+
 .form-card {
-  max-width: 720px;
+  max-width: 760px;
 }
 
 .form-row {
@@ -158,36 +225,38 @@ onMounted(loadJob)
   gap: 16px;
 }
 
+.field-error {
+  display: block;
+  font-size: 12px;
+  color: #f5222d;
+  margin-top: 4px;
+}
+
+.field-hint {
+  font-size: 11px;
+  color: #bbb;
+  margin-top: 4px;
+  text-align: right;
+}
+
 .form-actions {
   display: flex;
   gap: 12px;
-  margin-top: 20px;
-  padding-top: 16px;
+  margin-top: 24px;
+  padding-top: 18px;
   border-top: 1px solid #f0f0f0;
 }
 
-.form-error {
-  margin-top: 12px;
-  padding: 8px 12px;
-  background: #fff1f0;
-  color: #f5222d;
-  border-radius: 6px;
-  font-size: 13px;
+.preview-tip {
+  padding: 12px 16px;
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
 }
 
-.form-success {
-  margin-top: 12px;
-  padding: 8px 12px;
-  background: #f6ffed;
-  color: #52c41a;
-  border-radius: 6px;
+.tip-text {
   font-size: 13px;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  color: #ad6800;
+  margin: 0;
 }
 
 @media (max-width: 600px) {

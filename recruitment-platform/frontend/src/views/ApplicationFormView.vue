@@ -7,7 +7,12 @@
       </div>
     </div>
 
-    <div v-if="job" class="card apply-job-info">
+    <div v-if="jobError" class="error-box card">
+      <p>⚠️ 加载职位信息失败</p>
+      <button class="btn btn-secondary btn-sm" @click="loadJob">重新加载</button>
+    </div>
+
+    <div v-else-if="job" class="card apply-job-info">
       <h3>目标职位</h3>
       <div class="target-job">
         <span class="job-title">{{ job.title }}</span>
@@ -20,12 +25,24 @@
       <form @submit.prevent="submit">
         <div class="form-row">
           <div class="form-group">
-            <label>姓名 *</label>
-            <input v-model="form.applicantName" type="text" placeholder="请输入姓名" required />
+            <label>姓名 <span class="req">*</span></label>
+            <input
+              v-model="form.applicantName"
+              type="text"
+              placeholder="请输入姓名"
+              :class="{ 'has-error': formErrors.applicantName }"
+            />
+            <div v-if="formErrors.applicantName" class="field-error">{{ formErrors.applicantName }}</div>
           </div>
           <div class="form-group">
-            <label>联系方式 *</label>
-            <input v-model="form.contact" type="text" placeholder="手机号或邮箱" required />
+            <label>联系方式 <span class="req">*</span></label>
+            <input
+              v-model="form.contact"
+              type="text"
+              placeholder="手机号或邮箱"
+              :class="{ 'has-error': formErrors.contact }"
+            />
+            <div v-if="formErrors.contact" class="field-error">{{ formErrors.contact }}</div>
           </div>
         </div>
 
@@ -42,6 +59,7 @@
         <div class="form-group">
           <label>简历摘要</label>
           <textarea v-model="form.resumeSummary" rows="4" placeholder="简要描述您的工作经历和核心优势..."></textarea>
+          <div class="hint">建议 20-500 字，突出匹配岗位的核心能力</div>
         </div>
 
         <div class="form-group">
@@ -50,6 +68,7 @@
           <div v-if="parsedTags.length" class="tags-preview">
             <span v-for="tag in parsedTags" :key="tag" class="tag tag-blue">{{ tag }}</span>
           </div>
+          <div v-else class="hint">多个标签用中文或英文逗号、顿号分隔</div>
         </div>
 
         <div class="form-actions">
@@ -58,25 +77,25 @@
             {{ submitting ? '提交中...' : '提交投递' }}
           </button>
         </div>
-
-        <div v-if="error" class="form-error">{{ error }}</div>
-        <div v-if="success" class="form-success">{{ success }}</div>
       </form>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, reactive, inject, onMounted, onActivated, defineOptions } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { jobApi, applicationApi } from '../services/api'
 
+defineOptions({ name: 'ApplicationFormView' })
+
 const route = useRoute()
 const router = useRouter()
+const toast = inject('toast')
+
 const job = ref(null)
+const jobError = ref(false)
 const submitting = ref(false)
-const error = ref('')
-const success = ref('')
 
 const form = ref({
   applicantName: '',
@@ -84,6 +103,11 @@ const form = ref({
   targetPosition: '',
   resumeSummary: '',
   workYears: 0
+})
+
+const formErrors = reactive({
+  applicantName: '',
+  contact: ''
 })
 
 const skillInput = ref('')
@@ -96,34 +120,64 @@ const parsedTags = computed(() => {
 })
 
 async function loadJob() {
+  jobError.value = false
   try {
     job.value = await jobApi.get(route.params.jobId)
     form.value.targetPosition = job.value.title
   } catch (e) {
-    error.value = '加载职位失败: ' + e.message
+    jobError.value = true
+    toast.error('加载职位信息失败：' + e.message)
   }
 }
 
+function validate() {
+  let ok = true
+  formErrors.applicantName = ''
+  formErrors.contact = ''
+
+  if (!form.value.applicantName || form.value.applicantName.trim().length < 2) {
+    formErrors.applicantName = '请输入真实姓名（至少 2 字）'
+    ok = false
+  }
+  if (!form.value.contact || form.value.contact.trim().length < 5) {
+    formErrors.contact = '请输入有效的手机号或邮箱（至少 5 位）'
+    ok = false
+  }
+  return ok
+}
+
 async function submit() {
-  error.value = ''
-  success.value = ''
+  if (!validate()) {
+    toast.warning('请先完善必填项')
+    return
+  }
+
   submitting.value = true
   try {
     await applicationApi.create({
       jobId: route.params.jobId,
       ...form.value,
+      applicantName: form.value.applicantName.trim(),
+      contact: form.value.contact.trim(),
+      targetPosition: form.value.targetPosition || (job.value ? job.value.title : ''),
       skillTags: parsedTags.value
     })
-    success.value = '投递成功！'
-    setTimeout(() => router.push('/applications'), 800)
+
+    try {
+      localStorage.setItem('lastApplicantName', form.value.applicantName.trim())
+    } catch (e) {}
+
+    toast.success('投递成功！正在跳转到投递管理...')
+    setTimeout(() => router.push('/applications'), 900)
   } catch (e) {
-    error.value = e.message
+    toast.error('投递失败：' + e.message)
   } finally {
     submitting.value = false
   }
 }
 
 onMounted(loadJob)
+onActivated(loadJob)
 </script>
 
 <style scoped>
@@ -186,22 +240,38 @@ onMounted(loadJob)
   gap: 4px;
 }
 
-.form-error {
-  margin-top: 12px;
-  padding: 8px 12px;
-  background: #fff1f0;
+.req {
   color: #f5222d;
-  border-radius: 6px;
-  font-size: 13px;
 }
 
-.form-success {
-  margin-top: 12px;
-  padding: 8px 12px;
-  background: #f6ffed;
-  color: #52c41a;
-  border-radius: 6px;
-  font-size: 13px;
+.hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #999;
+}
+
+.field-error {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #f5222d;
+}
+
+.has-error {
+  border-color: #ffa39e !important;
+  background: #fff1f0;
+}
+
+.error-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff1f0;
+  color: #f5222d;
+}
+
+.error-box p {
+  margin: 0;
+  font-size: 14px;
 }
 
 .header-left {
