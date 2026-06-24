@@ -1,12 +1,36 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useToast } from '../composables/useToast'
+import { useRole } from '../composables/useRole'
 
 const routes = [
   {
+    path: '/login',
+    name: 'login',
+    component: () => import('../views/LoginView.vue'),
+    meta: { title: '登录 · 选择角色' }
+  },
+  {
     path: '/',
+    redirect: (to) => {
+      try {
+        const role = (localStorage.getItem('currentRole') || 'manager')
+        if (role === 'applicant') return '/jobs'
+        if (role === 'recruiter') return '/applications'
+        return '/dashboard'
+      } catch {
+        return '/dashboard'
+      }
+    }
+  },
+  {
+    path: '/dashboard',
     name: 'dashboard',
     component: () => import('../views/DashboardView.vue'),
     meta: { title: '仪表盘' }
+  },
+  {
+    path: '/candidates',
+    redirect: '/applications'
   },
   {
     path: '/jobs',
@@ -81,13 +105,22 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const title = to.meta?.title ? `${to.meta.title} - 招聘平台` : '招聘平台'
   document.title = title
+
+  try {
+    if (!localStorage.getItem('currentRole')) {
+      localStorage.setItem('currentRole', 'manager')
+    }
+  } catch {}
+
   next()
 })
 
 router.onError((err) => {
   console.error('路由错误:', err)
-  const toast = useToast()
-  toast.error('页面加载失败，请刷新重试')
+  try {
+    const toast = useToast()
+    toast.error('页面加载失败，请刷新重试')
+  } catch {}
 })
 
 export default router

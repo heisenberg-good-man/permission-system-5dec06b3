@@ -8,7 +8,12 @@
     "install:frontend": "cd frontend && npm.cmd install",
     "install:all": "npm.cmd run config:cache && npm.cmd run install:server && npm.cmd run install:frontend",
     "dev:server": "cd server && node index.js",
-    "dev:frontend": "cd frontend && npx.cmd vite",
-    "dev": "echo 请分别在两个终端运行 npm.cmd run dev:server 和 npm.cmd run dev:frontend"
+    "start:server": "cd server && node index.js",
+    "dev:frontend": "cd frontend && npx.cmd vite --host",
+    "start:frontend": "cd frontend && npx.cmd vite --host",
+    "dev": "echo 请分别在两个终端运行: 终端1: npm.cmd run start:server   终端2: npm.cmd run start:frontend",
+    "start": "echo 请分别在两个终端运行: 终端1: npm.cmd run start:server   终端2: npm.cmd run start:frontend",
+    "check:server": "powershell -Command \"try { Invoke-WebRequest -Uri 'http://localhost:3001/api/stats' -UseBasicParsing -TimeoutSec 3 | Select-Object -ExpandProperty StatusCode } catch { Write-Host 'Server not running on port 3001' }\"",
+    "check:frontend": "powershell -Command \"try { Invoke-WebRequest -Uri 'http://localhost:5173' -UseBasicParsing -TimeoutSec 3 | Select-Object -ExpandProperty StatusCode } catch { Write-Host 'Frontend not running on port 5173' }\""
   }
 }
