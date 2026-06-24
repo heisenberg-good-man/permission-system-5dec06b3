@@ -2,6 +2,7 @@
   "name": "recruitment-platform",
   "version": "1.0.0",
   "private": true,
+  "description": "招聘平台（前后端分离 · 本地 Mock 数据）",
   "scripts": {
     "config:cache": "npm.cmd config set cache \"./.npm-cache\" --location=project && cd frontend && npm.cmd config set cache \"../.npm-cache\" --location=project && cd ../server && npm.cmd config set cache \"../.npm-cache\" --location=project && cd ..",
     "install:server": "cd server && npm.cmd install",
@@ -15,5 +16,9 @@
     "start": "echo 请分别在两个终端运行: 终端1: npm.cmd run start:server   终端2: npm.cmd run start:frontend",
     "check:server": "powershell -Command \"try { Invoke-WebRequest -Uri 'http://localhost:3001/api/stats' -UseBasicParsing -TimeoutSec 3 | Select-Object -ExpandProperty StatusCode } catch { Write-Host 'Server not running on port 3001' }\"",
     "check:frontend": "powershell -Command \"try { Invoke-WebRequest -Uri 'http://localhost:5173' -UseBasicParsing -TimeoutSec 3 | Select-Object -ExpandProperty StatusCode } catch { Write-Host 'Frontend not running on port 5173' }\""
-  }
+  },
+  "workspaces": [
+    "frontend",
+    "server"
+  ]
 }

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "config:cache": "npm.cmd config set cache \"../.npm-cache\" --location=project",
     "start": "node index.js",
     "dev": "node index.js"
   },

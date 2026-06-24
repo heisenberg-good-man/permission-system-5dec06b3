@@ -123,7 +123,12 @@ const canView = computed(() =>
   false
 )
 const filterByMe = ref(isApplicant.value)
-const pageTitle = computed(() => isApplicant.value ? '我的投递' : '投递管理')
+const isCandidatesPath = computed(() => route.path.startsWith('/candidates'))
+const pageTitle = computed(() => {
+  if (isApplicant.value) return '我的投递'
+  if (isCandidatesPath.value) return '候选人管理'
+  return '投递管理'
+})
 
 const applications = ref([])
 const loading = ref(true)

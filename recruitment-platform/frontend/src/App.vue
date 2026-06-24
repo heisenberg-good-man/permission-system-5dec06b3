@@ -1,5 +1,5 @@
 <template>
-  <div class="app-layout">
+  <div class="app-layout" v-if="!isBlankLayout">
     <aside class="sidebar">
       <div class="sidebar-header">
         <h2>招聘平台</h2>
@@ -38,11 +38,14 @@
     </main>
     <ToastContainer />
   </div>
+  <router-view v-else v-slot="{ Component }">
+    <component :is="Component" />
+  </router-view>
 </template>
 
 <script setup>
 import { ref, provide, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import ToastContainer from './components/ToastContainer.vue'
 import RoleSwitcher from './components/RoleSwitcher.vue'
 import NotificationCenter from './components/NotificationCenter.vue'
@@ -50,6 +53,7 @@ import { useToast } from './composables/useToast'
 import { useRole } from './composables/useRole'
 
 const router = useRouter()
+const route = useRoute()
 const keepAliveComponents = ['DashboardView', 'JobListView', 'ApplicationListView', 'InterviewListView']
 const toast = useToast()
 const lastRefresh = ref('')
@@ -58,9 +62,11 @@ const role = useRole()
 provide('role', role)
 provide('toast', toast)
 
+const isBlankLayout = computed(() => route.meta?.layout === 'blank')
+
 const allNavItems = [
   {
-    path: '/',
+    path: '/dashboard',
     label: '仪表盘',
     icon: '📊',
     permission: 'dashboard',
@@ -84,12 +90,21 @@ const allNavItems = [
     defaultFor: ['recruiter']
   },
   {
+    path: '/candidates',
+    label: '候选人管理',
+    icon: '👥',
+    permission: 'application:list',
+    exact: false,
+    defaultFor: ['recruiter', 'manager']
+  },
+  {
     path: '/applications',
     label: '投递管理',
     icon: '📝',
     permission: 'application:list',
     exact: false,
-    defaultFor: []
+    defaultFor: [],
+    deprecated: true
   },
   {
     path: '/interviews',
@@ -114,6 +129,7 @@ const allNavItems = [
 const visibleNavItems = computed(() => {
   const seen = new Set()
   return allNavItems.filter(item => {
+    if (item.deprecated) return false
     if (seen.has(item.path)) {
       if (item.applicantOnly && !role.isApplicant.value) return false
       if (item.staffOnly && role.isApplicant.value) return false
@@ -148,8 +164,8 @@ const visibleNavItems = computed(() => {
 
 const defaultRoute = computed(() => {
   if (role.isApplicant.value) return '/jobs'
-  if (role.isRecruiter.value) return '/applications'
-  return '/'
+  if (role.isRecruiter.value) return '/candidates'
+  return '/dashboard'
 })
 
 watch(() => role.role.value, (newRole, oldRole) => {

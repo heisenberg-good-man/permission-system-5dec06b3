@@ -4,9 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "config:cache": "npm.cmd config set cache \"../.npm-cache\" --location=project",
+    "dev": "npx.cmd vite --host",
+    "start": "npx.cmd vite --host",
+    "build": "npx.cmd vite build",
+    "preview": "npx.cmd vite preview --host"
   },
   "dependencies": {
     "vue": "^3.4.0",

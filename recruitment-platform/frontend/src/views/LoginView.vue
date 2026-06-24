@@ -72,14 +72,14 @@ const quickLinks = computed(() => ({
     { path: '/interviews', label: '我的面试', icon: '📅' }
   ],
   recruiter: [
-    { path: '/applications', label: '投递管理', icon: '📝' },
+    { path: '/candidates', label: '候选人管理', icon: '👥' },
     { path: '/jobs', label: '职位管理', icon: '💼' },
     { path: '/interviews', label: '面试安排', icon: '📅' }
   ],
   manager: [
-    { path: '/', label: '仪表盘', icon: '📊' },
-    { path: '/interviews', label: '面试安排', icon: '📅' },
-    { path: '/applications', label: '候选人', icon: '👥' }
+    { path: '/dashboard', label: '仪表盘', icon: '📊' },
+    { path: '/candidates', label: '候选人', icon: '👥' },
+    { path: '/interviews', label: '面试安排', icon: '📅' }
   ]
 }))
 
@@ -89,9 +89,9 @@ function selectRole(val) {
 
 function enter() {
   role.setRole(currentRole.value)
-  let target = '/'
+  let target = '/dashboard'
   if (currentRole.value === 'applicant') target = '/jobs'
-  if (currentRole.value === 'recruiter') target = '/applications'
+  if (currentRole.value === 'recruiter') target = '/candidates'
   toast?.success?.(`已切换到${roles.find(r => r.value === currentRole.value)?.label}视角`)
   router.push(target)
 }

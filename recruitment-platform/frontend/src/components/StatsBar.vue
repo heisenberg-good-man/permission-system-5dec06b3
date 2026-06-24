@@ -126,14 +126,16 @@ const displayStats = computed(() => {
 })
 
 function onJump(target, status) {
+  const isStaff = !!(role && (role.isRecruiter?.value || role.isManager?.value))
   if (target === 'jobs') {
     router.push('/jobs')
   } else if (target === 'apps') {
-    router.push(status ? { path: '/applications', query: { status } } : '/applications')
+    const appsPath = isStaff ? '/candidates' : '/applications'
+    router.push(status ? { path: appsPath, query: { status } } : appsPath)
   } else if (target === 'interviews') {
     router.push(status ? { path: '/interviews', query: { status } } : '/interviews')
   } else if (target === 'notifications') {
-    router.push('/')
+    router.push('/dashboard')
     nextTick(() => {
       const bell = document.querySelector('.notif-bell-btn')
       if (bell) bell.click()

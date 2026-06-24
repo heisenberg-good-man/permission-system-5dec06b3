@@ -81,7 +81,7 @@ router.post('/', (req, res) => {
 
   const now = new Date().toISOString()
   const app = {
-    id: nextAppId++,
+    id: nextAppId,
     jobId,
     applicantName: trimmedName,
     contact: String(contact).trim(),

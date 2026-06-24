@@ -10,7 +10,7 @@
         <button class="btn btn-secondary" @click="switchToManager">切换为招聘负责人</button>
       </template>
       <template v-else>
-        <router-link to="/applications" class="btn btn-primary" style="margin-bottom:8px">管理候选人</router-link>
+        <router-link to="/candidates" class="btn btn-primary" style="margin-bottom:8px">管理候选人</router-link>
         <button class="btn btn-secondary" @click="switchToManager">切换为招聘负责人</button>
       </template>
     </div>
@@ -58,7 +58,7 @@
       <div class="card section-card">
         <div class="section-head">
           <h3 class="section-title">最近投递</h3>
-          <router-link to="/applications" class="link-more">查看全部 →</router-link>
+          <router-link to="/candidates" class="link-more">查看全部 →</router-link>
         </div>
         <div v-if="loadingApps" class="loading-sm">加载中...</div>
         <div v-else-if="recentApps.length === 0" class="empty-sm">

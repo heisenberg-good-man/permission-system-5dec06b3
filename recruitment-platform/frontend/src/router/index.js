@@ -7,15 +7,16 @@ const routes = [
     path: '/login',
     name: 'login',
     component: () => import('../views/LoginView.vue'),
-    meta: { title: '登录 · 选择角色' }
+    meta: { title: '登录 · 选择角色', layout: 'blank' }
   },
   {
     path: '/',
+    name: 'home',
     redirect: (to) => {
       try {
         const role = (localStorage.getItem('currentRole') || 'manager')
         if (role === 'applicant') return '/jobs'
-        if (role === 'recruiter') return '/applications'
+        if (role === 'recruiter') return '/candidates'
         return '/dashboard'
       } catch {
         return '/dashboard'
@@ -30,7 +31,9 @@ const routes = [
   },
   {
     path: '/candidates',
-    redirect: '/applications'
+    name: 'candidate-list',
+    component: () => import('../views/ApplicationListView.vue'),
+    meta: { title: '候选人管理' }
   },
   {
     path: '/jobs',
