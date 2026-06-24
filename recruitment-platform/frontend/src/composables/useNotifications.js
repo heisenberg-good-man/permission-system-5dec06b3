@@ -63,9 +63,11 @@ export function useNotifications() {
     }
   }
 
-  if (role) {
-    watch(() => role.role.value, () => { refresh() }, { immediate: true })
-  }
+  watch(
+    () => role?.role?.value,
+    () => { if (role) refresh() },
+    { immediate: true }
+  )
 
   return {
     unreadCount,
