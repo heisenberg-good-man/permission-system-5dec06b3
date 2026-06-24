@@ -8,16 +8,16 @@
       <RoleSwitcher @change="onRoleChange" />
 
       <nav class="sidebar-nav">
-        <template v-for="item in visibleNavItems" :key="item.path">
-          <router-link
-            :to="item.path"
-            class="nav-item"
-            active-class="active"
-            :exact="item.exact"
-          >
-            <span class="nav-icon">{{ item.icon }}</span>{{ item.label }}
-          </router-link>
-        </template>
+        <router-link
+          v-for="item in visibleNavItems"
+          :key="item.path + item.label"
+          :to="item.path"
+          class="nav-item"
+          :exact-active-class="item.exact ? 'active' : ''"
+          :active-class="item.exact ? '' : 'active'"
+        >
+          <span class="nav-icon">{{ item.icon }}</span>{{ item.label }}
+        </router-link>
       </nav>
       <div class="sidebar-footer">
         <p v-if="lastRefresh" class="last-refresh">数据更新: {{ formatTime(lastRefresh) }}</p>
@@ -64,102 +64,51 @@ provide('toast', toast)
 
 const isBlankLayout = computed(() => route.meta?.layout === 'blank')
 
-const allNavItems = [
+const navConfig = [
   {
     path: '/dashboard',
-    label: '仪表盘',
-    icon: '📊',
     permission: 'dashboard',
     exact: true,
-    defaultFor: ['manager']
+    labels: { manager: '仪表盘' },
+    icons: { manager: '📊' }
   },
   {
     path: '/jobs',
-    label: '职位大厅',
-    icon: '🔍',
     permission: 'job:list',
     exact: false,
-    defaultFor: ['applicant']
-  },
-  {
-    path: '/jobs',
-    label: '职位管理',
-    icon: '💼',
-    permission: 'job:create',
-    exact: false,
-    defaultFor: ['recruiter']
+    labels: { applicant: '职位大厅', recruiter: '职位管理', manager: '职位管理' },
+    icons: { applicant: '🔍', recruiter: '💼', manager: '💼' }
   },
   {
     path: '/candidates',
-    label: '候选人管理',
-    icon: '👥',
     permission: 'application:list',
     exact: false,
-    defaultFor: ['recruiter', 'manager']
-  },
-  {
-    path: '/applications',
-    label: '投递管理',
-    icon: '📝',
-    permission: 'application:list',
-    exact: false,
-    defaultFor: [],
-    deprecated: true
+    labels: { recruiter: '候选人管理', manager: '候选人管理' },
+    icons: { recruiter: '👥', manager: '👥' }
   },
   {
     path: '/interviews',
-    label: '我的面试',
-    icon: '📅',
     permission: 'interview:list',
     exact: false,
-    defaultFor: ['applicant'],
-    applicantOnly: true
-  },
-  {
-    path: '/interviews',
-    label: '面试安排',
-    icon: '📅',
-    permission: 'interview:list',
-    exact: false,
-    defaultFor: ['recruiter', 'manager'],
-    staffOnly: true
+    labels: { applicant: '我的面试', recruiter: '面试安排', manager: '面试安排' },
+    icons: { applicant: '📅', recruiter: '📅', manager: '📅' }
   }
 ]
 
 const visibleNavItems = computed(() => {
-  const seen = new Set()
-  return allNavItems.filter(item => {
-    if (item.deprecated) return false
-    if (seen.has(item.path)) {
-      if (item.applicantOnly && !role.isApplicant.value) return false
-      if (item.staffOnly && role.isApplicant.value) return false
-    } else {
+  const currentRole = role.role.value
+  return navConfig
+    .filter(item => {
+      if (!item.labels[currentRole]) return false
       if (!role.hasPermission(item.permission)) return false
-    }
-    if (seen.has(item.path)) {
-      if (item.path === '/jobs') {
-        if (role.isApplicant.value) return item.label === '职位大厅'
-        return item.label === '职位管理'
-      }
-      if (item.path === '/interviews') {
-        if (role.isApplicant.value) return item.label === '我的面试'
-        return item.label === '面试安排'
-      }
-    }
-    seen.add(item.path)
-    return true
-  }).map(item => {
-    let label = item.label
-    let icon = item.icon
-    if (item.path === '/jobs') {
-      label = role.isApplicant.value ? '职位大厅' : '职位管理'
-      icon = role.isApplicant.value ? '🔍' : '💼'
-    }
-    if (item.path === '/interviews') {
-      label = role.isApplicant.value ? '我的面试' : '面试安排'
-    }
-    return { ...item, label, icon }
-  })
+      return true
+    })
+    .map(item => ({
+      path: item.path,
+      label: item.labels[currentRole],
+      icon: item.icons[currentRole],
+      exact: item.exact
+    }))
 })
 
 const defaultRoute = computed(() => {
@@ -170,12 +119,11 @@ const defaultRoute = computed(() => {
 
 watch(() => role.role.value, (newRole, oldRole) => {
   if (newRole !== oldRole) {
-    const target = defaultRoute.value
-    router.push(target).catch(() => {})
+    router.push(defaultRoute.value).catch(() => {})
   }
 }, { immediate: false })
 
-function onRoleChange(newRole) {
+function onRoleChange() {
   markRefreshed()
 }
 
@@ -408,12 +356,6 @@ body {
 .form-group textarea {
   resize: vertical;
   min-height: 80px;
-}
-
-.form-group input[required] + label::after,
-.form-group label.has-required::after {
-  content: '';
-  margin-left: 4px;
 }
 
 .form-group label.required::after {
