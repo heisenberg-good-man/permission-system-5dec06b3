@@ -123,19 +123,21 @@ watch(() => role.role.value, (newRole, oldRole) => {
   }
 }, { immediate: false })
 
-function onRoleChange() {
-  markRefreshed()
-}
-
 function formatTime(ts) {
   if (!ts) return ''
   const d = new Date(ts)
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`
 }
 
-provide('markRefreshed', () => {
+function markRefreshed() {
   lastRefresh.value = new Date().toISOString()
-})
+}
+
+provide('markRefreshed', markRefreshed)
+
+function onRoleChange() {
+  markRefreshed()
+}
 </script>
 
 <style>

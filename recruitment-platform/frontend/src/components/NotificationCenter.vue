@@ -151,8 +151,9 @@ setInterval(() => { if (!open.value) notifications.refresh() }, 30000)
   height: 36px;
   border-radius: 50%;
   border: none;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: #fff;
+  color: #1a1a2e;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -160,8 +161,8 @@ setInterval(() => { if (!open.value) notifications.refresh() }, 30000)
   position: relative;
   transition: all 0.2s;
 }
-.nc-trigger:hover { background: rgba(255, 255, 255, 0.2); }
-.nc-trigger.active { background: rgba(233, 69, 96, 0.3); }
+.nc-trigger:hover { background: #f5f5f5; }
+.nc-trigger.active { background: #fff0f3; color: #e94560; }
 .nc-icon { font-size: 16px; }
 .nc-badge {
   position: absolute;
