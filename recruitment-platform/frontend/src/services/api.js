@@ -39,5 +39,30 @@ export const messageApi = {
 }
 
 export const statsApi = {
-  get() { return request('/stats') }
+  get(params = {}) {
+    const qs = new URLSearchParams(params).toString()
+    return request(`/stats${qs ? '?' + qs : ''}`)
+  }
+}
+
+export const interviewApi = {
+  list(params = {}) {
+    const qs = new URLSearchParams(params).toString()
+    return request(`/interviews${qs ? '?' + qs : ''}`)
+  },
+  get(id) { return request(`/interviews/${id}`) },
+  create(data) { return request('/interviews', { method: 'POST', body: JSON.stringify(data) }) },
+  submitFeedback(id, data) {
+    return request(`/interviews/${id}/feedback`, { method: 'PATCH', body: JSON.stringify(data) })
+  },
+  cancel(id) { return request(`/interviews/${id}/cancel`, { method: 'PATCH' }) }
+}
+
+export const notificationApi = {
+  list(params = {}) {
+    const qs = new URLSearchParams(params).toString()
+    return request(`/notifications${qs ? '?' + qs : ''}`)
+  },
+  markRead(id) { return request(`/notifications/${id}/read`, { method: 'PATCH' }) },
+  markAllRead(data) { return request('/notifications/read-all', { method: 'PATCH', body: JSON.stringify(data) }) }
 }

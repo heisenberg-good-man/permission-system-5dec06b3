@@ -57,6 +57,10 @@ export function useRole() {
   const canViewApplicationDetail = computed(() => isRecruiter.value || isManager.value)
   const canUpdateStatus = computed(() => isRecruiter.value || isManager.value)
   const canSendMessage = computed(() => true)
+  const canScheduleInterview = computed(() => isRecruiter.value || isManager.value)
+  const canViewInterviews = computed(() => isRecruiter.value || isManager.value || isApplicant.value)
+  const canSubmitFeedback = computed(() => isRecruiter.value || isManager.value)
+  const canViewNotifications = computed(() => true)
 
   function setRole(newRole) {
     if (Object.values(ROLES).includes(newRole)) {
@@ -80,6 +84,10 @@ export function useRole() {
       case 'application:detail': return canViewApplicationDetail.value
       case 'application:status': return canUpdateStatus.value
       case 'message:send': return canSendMessage.value
+      case 'interview:list': return canViewInterviews.value
+      case 'interview:schedule': return canScheduleInterview.value
+      case 'interview:feedback': return canSubmitFeedback.value
+      case 'notification:view': return canViewNotifications.value
       default: return false
     }
   }
@@ -101,6 +109,10 @@ export function useRole() {
     canViewApplicationDetail,
     canUpdateStatus,
     canSendMessage,
+    canScheduleInterview,
+    canViewInterviews,
+    canSubmitFeedback,
+    canViewNotifications,
     setRole,
     switchToApplicant,
     switchToRecruiter,

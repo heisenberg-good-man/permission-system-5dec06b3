@@ -1,6 +1,24 @@
 const express = require('express')
 const router = express.Router()
-const { applications, jobs, nextAppId } = require('../data/store')
+const { applications, jobs, notifications, nextAppId, nextNotificationId } = require('../data/store')
+
+const STATUS_LABELS = {
+  pending: '待筛选',
+  contacted: '已沟通',
+  interviewing: '面试中',
+  rejected: '不合适'
+}
+
+function createNotification(notif) {
+  const n = {
+    id: nextNotificationId,
+    read: false,
+    createdAt: new Date().toISOString(),
+    ...notif
+  }
+  notifications.unshift(n)
+  return n
+}
 
 router.get('/', (req, res) => {
   const { jobId, status, keyword, applicantName } = req.query
@@ -76,6 +94,32 @@ router.post('/', (req, res) => {
     updatedAt: now
   }
   applications.push(app)
+
+  createNotification({
+    targetRole: 'recruiter',
+    targetName: 'all',
+    type: 'new_application',
+    title: '新的投递',
+    content: `${trimmedName} 投递了「${job.title}」岗位，请及时查看。`,
+    relatedId: app.id
+  })
+  createNotification({
+    targetRole: 'manager',
+    targetName: 'all',
+    type: 'new_application',
+    title: '新的投递',
+    content: `${trimmedName} 投递了「${job.title}」岗位。`,
+    relatedId: app.id
+  })
+  createNotification({
+    targetRole: 'applicant',
+    targetName: trimmedName,
+    type: 'new_application',
+    title: '投递成功',
+    content: `您投递的「${job.title}」岗位已提交，HR会尽快与您联系。`,
+    relatedId: app.id
+  })
+
   res.status(201).json({ ...app, jobTitle: job.title, company: job.company })
 })
 
@@ -87,8 +131,33 @@ router.patch('/:id/status', (req, res) => {
   }
   const idx = applications.findIndex(a => a.id === req.params.id)
   if (idx === -1) return res.status(404).json({ error: '投递记录不存在' })
+  const oldStatus = applications[idx].status
   applications[idx].status = status
   applications[idx].updatedAt = new Date().toISOString()
+
+  if (oldStatus !== status) {
+    const app = applications[idx]
+    const job = jobs.find(j => j.id === app.jobId)
+    const jobTitle = job ? job.title : app.targetPosition
+
+    createNotification({
+      targetRole: 'applicant',
+      targetName: app.applicantName,
+      type: 'status_changed',
+      title: '状态更新',
+      content: `您投递的「${jobTitle}」岗位状态已更新为：${STATUS_LABELS[status]}。`,
+      relatedId: app.id
+    })
+    createNotification({
+      targetRole: 'manager',
+      targetName: 'all',
+      type: 'status_changed',
+      title: '候选人状态更新',
+      content: `${app.applicantName}（${jobTitle}）状态更新为：${STATUS_LABELS[status]}。`,
+      relatedId: app.id
+    })
+  }
+
   res.json(applications[idx])
 })
 

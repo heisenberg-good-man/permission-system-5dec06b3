@@ -3,43 +3,73 @@
     <div class="stat-card" @click="onJump('jobs')" title="点击查看所有职位">
       <div class="stat-icon" style="background:#e6f7ff;color:#1890ff;">📋</div>
       <div class="stat-info">
-        <div class="stat-value">{{ stats.openPositions }}</div>
+        <div class="stat-value">{{ displayStats.openPositions }}</div>
         <div class="stat-label">开放职位</div>
       </div>
     </div>
     <div class="stat-card" @click="onJump('apps')" title="点击查看今日投递">
       <div class="stat-icon" style="background:#fff7e6;color:#fa8c16;">📝</div>
       <div class="stat-info">
-        <div class="stat-value pulse" v-if="stats.todayNewApplications > 0">{{ stats.todayNewApplications }}</div>
-        <div class="stat-value" v-else>{{ stats.todayNewApplications }}</div>
+        <div class="stat-value pulse" v-if="displayStats.todayNewApplications > 0">{{ displayStats.todayNewApplications }}</div>
+        <div class="stat-value" v-else>{{ displayStats.todayNewApplications }}</div>
         <div class="stat-label">今日新增投递</div>
       </div>
     </div>
     <div class="stat-card" @click="onJump('apps', 'pending')" title="点击筛选待筛选">
       <div class="stat-icon" style="background:#fff1f0;color:#f5222d;">⏳</div>
       <div class="stat-info">
-        <div class="stat-value">{{ stats.pendingCandidates }}</div>
+        <div class="stat-value">{{ displayStats.pendingCandidates }}</div>
         <div class="stat-label">待筛选候选人</div>
       </div>
     </div>
     <div class="stat-card" @click="onJump('apps', 'contacted')" title="点击筛选已沟通">
       <div class="stat-icon" style="background:#f9f0ff;color:#722ed1;">💬</div>
       <div class="stat-info">
-        <div class="stat-value">{{ stats.contactedCount }}</div>
+        <div class="stat-value">{{ displayStats.contactedCount }}</div>
         <div class="stat-label">已沟通人数</div>
       </div>
     </div>
     <div class="stat-card" @click="onJump('apps', 'interviewing')" title="点击筛选面试中">
       <div class="stat-icon" style="background:#f6ffed;color:#52c41a;">🎯</div>
       <div class="stat-info">
-        <div class="stat-value">{{ stats.interviewingCount }}</div>
+        <div class="stat-value">{{ displayStats.interviewingCount }}</div>
         <div class="stat-label">面试中</div>
+      </div>
+    </div>
+    <div class="stat-card" @click="onJump('interviews', 'scheduled')" title="点击查看今日面试">
+      <div class="stat-icon" style="background:#e6f7ff;color:#13c2c2;">📅</div>
+      <div class="stat-info">
+        <div class="stat-value">{{ displayStats.todayInterviews || 0 }}</div>
+        <div class="stat-label">今日面试</div>
+      </div>
+    </div>
+    <div class="stat-card" @click="onJump('interviews', 'scheduled')" title="点击查看待反馈面试">
+      <div class="stat-icon" style="background:#fff7e6;color:#faad14;">📝</div>
+      <div class="stat-info">
+        <div class="stat-value pulse" v-if="(displayStats.pendingFeedbackInterviews || 0) > 0">{{ displayStats.pendingFeedbackInterviews }}</div>
+        <div class="stat-value" v-else>{{ displayStats.pendingFeedbackInterviews || 0 }}</div>
+        <div class="stat-label">待反馈面试</div>
+      </div>
+    </div>
+    <div class="stat-card" @click="onJump('interviews', 'completed')" title="点击查看通过面试">
+      <div class="stat-icon" style="background:#f6ffed;color:#52c41a;">✅</div>
+      <div class="stat-info">
+        <div class="stat-value">{{ displayStats.passedInterviews || 0 }}</div>
+        <div class="stat-label">通过面试人数</div>
+      </div>
+    </div>
+    <div class="stat-card" @click="onJump('notifications')" title="点击查看通知">
+      <div class="stat-icon" style="background:#fff1f0;color:#ff4d4f;">🔔</div>
+      <div class="stat-info">
+        <div class="stat-value pulse" v-if="(displayStats.unreadNotifications || 0) > 0">{{ displayStats.unreadNotifications }}</div>
+        <div class="stat-value" v-else>{{ displayStats.unreadNotifications || 0 }}</div>
+        <div class="stat-label">未读通知</div>
       </div>
     </div>
     <div class="stat-card" @click="onJump('apps')" title="点击查看所有投递">
       <div class="stat-icon" style="background:#f5f5f5;color:#666;">📊</div>
       <div class="stat-info">
-        <div class="stat-value">{{ stats.totalApplications }}</div>
+        <div class="stat-value">{{ displayStats.totalApplications }}</div>
         <div class="stat-label">总投递数</div>
       </div>
     </div>
@@ -50,18 +80,26 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onActivated, inject } from 'vue'
+import { ref, onMounted, onActivated, inject, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { statsApi } from '../services/api'
 
 defineOptions({ name: 'StatsBar' })
 
+const props = defineProps({
+  stats: {
+    type: Object,
+    default: null
+  }
+})
+
 const router = useRouter()
 const toast = inject('toast')
+const role = inject('role')
 const markRefreshed = inject('markRefreshed', () => {})
 const emit = defineEmits(['updated'])
 
-const stats = ref({
+const defaultStats = {
   openPositions: 0,
   todayNewApplications: 0,
   pendingCandidates: 0,
@@ -69,23 +107,50 @@ const stats = ref({
   interviewingCount: 0,
   rejectedCount: 0,
   totalApplications: 0,
-  statusBreakdown: {}
-})
+  statusBreakdown: {},
+  todayInterviews: 0,
+  pendingFeedbackInterviews: 0,
+  passedInterviews: 0,
+  unreadNotifications: 0,
+  recentInterviews: []
+}
 
+const innerStats = ref({ ...defaultStats })
 const loadError = ref(false)
+
+const displayStats = computed(() => {
+  if (props.stats && Object.keys(props.stats).length > 0) {
+    return { ...defaultStats, ...props.stats }
+  }
+  return innerStats.value
+})
 
 function onJump(target, status) {
   if (target === 'jobs') {
     router.push('/jobs')
   } else if (target === 'apps') {
     router.push(status ? { path: '/applications', query: { status } } : '/applications')
+  } else if (target === 'interviews') {
+    router.push(status ? { path: '/interviews', query: { status } } : '/interviews')
+  } else if (target === 'notifications') {
+    router.push('/')
+    nextTick(() => {
+      const bell = document.querySelector('.notif-bell-btn')
+      if (bell) bell.click()
+    })
   }
 }
 
 async function loadStats(silent = false) {
+  if (props.stats) return
   loadError.value = false
   try {
-    stats.value = await statsApi.get()
+    const params = { role: role?.role?.value || 'manager' }
+    if (role?.isApplicant?.value) {
+      const name = localStorage.getItem('lastApplicantName')
+      if (name) params.applicantName = name
+    }
+    innerStats.value = { ...defaultStats, ...(await statsApi.get(params)) }
     markRefreshed()
     emit('updated')
   } catch (e) {
@@ -98,7 +163,7 @@ async function loadStats(silent = false) {
 onMounted(() => loadStats())
 onActivated(() => loadStats())
 
-defineExpose({ loadStats, stats })
+defineExpose({ loadStats, stats: innerStats })
 </script>
 
 <style scoped>

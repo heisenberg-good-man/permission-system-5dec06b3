@@ -26,7 +26,7 @@
       </div>
     </div>
 
-    <StatsBar ref="statsBar" />
+    <StatsBar ref="statsBar" :stats="globalStats" />
 
     <div class="dashboard-grid">
       <div class="card section-card">
@@ -77,6 +77,29 @@
           </div>
         </div>
       </div>
+
+      <div class="card section-card">
+        <div class="section-head">
+          <h3 class="section-title">近期面试动态</h3>
+          <router-link to="/interviews" class="link-more">查看全部 →</router-link>
+        </div>
+        <div v-if="loadingInterviews" class="loading-sm">加载中...</div>
+        <div v-else-if="recentInterviews.length === 0" class="empty-sm">
+          <div class="empty-icon">📅</div>
+          暂无面试安排
+        </div>
+        <div v-else>
+          <div v-for="itv in recentInterviews" :key="itv.id" class="quick-item" @click="goInterview(itv.id)">
+            <div class="quick-item-main">
+              <span class="job-title">{{ itv.applicantName }}</span>
+              <span class="job-company">{{ itv.jobTitle || '未知职位' }} · {{ formatInterviewTime(itv.interviewTime) }}</span>
+            </div>
+            <div class="quick-item-meta">
+              <span class="tag" :class="interviewStatusClass(itv.status)">{{ itv.statusLabel }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="status-panel card">
@@ -102,7 +125,7 @@
 import { ref, onMounted, onActivated, inject, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import StatsBar from '../components/StatsBar.vue'
-import { jobApi, applicationApi } from '../services/api'
+import { jobApi, applicationApi, statsApi } from '../services/api'
 
 defineOptions({ name: 'DashboardView' })
 
@@ -123,8 +146,11 @@ function switchToManager() {
 const statsBar = ref(null)
 const recentJobs = ref([])
 const recentApps = ref([])
+const recentInterviews = ref([])
 const loadingJobs = ref(false)
 const loadingApps = ref(false)
+const loadingInterviews = ref(false)
+const globalStats = ref(null)
 
 const statusLabels = {
   pending: '待筛选',
@@ -145,8 +171,18 @@ function formatSalary(min, max) {
   if (min >= 10000 && max >= 10000) return `${(min/10000).toFixed(1)}K-${(max/10000).toFixed(1)}K`
   return `${min}-${max}元`
 }
+function formatInterviewTime(t) {
+  if (!t) return ''
+  const d = new Date(t)
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+function interviewStatusClass(status) {
+  const map = { scheduled: 'status-interviewing', completed: 'status-contacted', cancelled: 'status-rejected' }
+  return map[status] || ''
+}
 function goJob(id) { router.push(`/jobs/${id}`) }
 function goApp(id) { router.push(`/applications/${id}`) }
+function goInterview(id) { router.push(`/interviews/${id}`) }
 
 function getStatusCount(key) {
   const map = {
@@ -194,11 +230,36 @@ async function loadApps() {
   }
 }
 
+async function loadStats() {
+  try {
+    const params = { role: role?.role?.value || 'manager' }
+    if (role?.isApplicant?.value) {
+      const name = localStorage.getItem('lastApplicantName')
+      if (name) params.applicantName = name
+    }
+    const data = await statsApi.get(params)
+    globalStats.value = data
+    recentInterviews.value = data.recentInterviews || []
+  } catch (e) {
+    console.error('加载统计失败:', e)
+  }
+}
+
+async function loadInterviews() {
+  loadingInterviews.value = true
+  try {
+    if (!globalStats.value) await loadStats()
+  } finally {
+    loadingInterviews.value = false
+  }
+}
+
 async function refreshAll() {
   try {
     await Promise.all([
       loadJobs(),
       loadApps(),
+      loadStats(),
       statsBar.value?.loadStats()
     ])
     markRefreshed()
@@ -226,7 +287,7 @@ onActivated(refreshAll)
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 20px;
   margin-bottom: 20px;
 }

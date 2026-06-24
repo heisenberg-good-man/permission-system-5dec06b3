@@ -107,6 +107,137 @@
               </div>
             </div>
 
+            <div v-if="!isApplicant" class="detail-section interview-section">
+              <div class="section-head">
+                <h3>📅 面试安排</h3>
+                <div class="section-actions">
+                  <button
+                    v-if="canScheduleInterview && !showInterviewForm"
+                    class="btn btn-primary btn-sm"
+                    :disabled="!['contacted', 'interviewing'].includes(app.status)"
+                    @click="showInterviewForm = true"
+                  >
+                    + 安排面试
+                  </button>
+                  <span v-if="!['contacted', 'interviewing'].includes(app.status)" class="hint-text">
+                    候选人需为「已沟通」或「面试中」状态
+                  </span>
+                </div>
+              </div>
+
+              <InterviewForm
+                v-if="showInterviewForm"
+                :application-id="app.id"
+                :application-summary="{ applicantName: app.applicantName, targetPosition: app.targetPosition }"
+                @cancel="showInterviewForm = false"
+                @success="onInterviewScheduled"
+              />
+
+              <div v-if="interviewsLoading" class="interviews-loading">加载面试记录中...</div>
+              <div v-else-if="interviews.length === 0 && !showInterviewForm" class="empty-sm">
+                暂无面试记录
+              </div>
+              <div v-else class="interview-list">
+                <div v-for="itv in interviews" :key="itv.id" class="interview-item" :class="`itv-${itv.status}`">
+                  <div class="itv-head">
+                    <span class="itv-time">📅 {{ formatInterviewTime(itv.interviewTime) }}</span>
+                    <span class="tag" :class="`status-${itv.status}`">{{ itv.statusLabel }}</span>
+                  </div>
+                  <div class="itv-body">
+                    <div class="itv-row">
+                      <span class="itv-label">方式</span>
+                      <span>{{ itv.interviewTypeLabel }}</span>
+                    </div>
+                    <div class="itv-row">
+                      <span class="itv-label">面试官</span>
+                      <span>{{ itv.interviewer }}</span>
+                    </div>
+                    <div class="itv-row" v-if="itv.location">
+                      <span class="itv-label">地点</span>
+                      <span>{{ itv.location }}</span>
+                    </div>
+                    <div class="itv-row" v-if="itv.meetingLink">
+                      <span class="itv-label">会议链接</span>
+                      <a :href="itv.meetingLink" target="_blank" class="link">{{ itv.meetingLink }}</a>
+                    </div>
+                    <div class="itv-row" v-if="itv.note">
+                      <span class="itv-label">备注</span>
+                      <span class="itv-note">{{ itv.note }}</span>
+                    </div>
+                    <div class="itv-row" v-if="itv.feedbackResult">
+                      <span class="itv-label">反馈结果</span>
+                      <span class="tag" :class="feedbackClass(itv.feedbackResult)">{{ itv.feedbackResultLabel }}</span>
+                    </div>
+                    <div class="itv-row" v-if="itv.feedbackContent">
+                      <span class="itv-label">反馈内容</span>
+                      <p class="feedback-text">{{ itv.feedbackContent }}</p>
+                    </div>
+                  </div>
+                  <div class="itv-actions" v-if="!isApplicant && itv.status === 'scheduled'">
+                    <button
+                      v-if="!showFeedbackForm || feedbackTargetId !== itv.id"
+                      class="btn btn-primary btn-sm"
+                      @click="openFeedback(itv.id)"
+                    >
+                      📝 提交反馈
+                    </button>
+                    <button
+                      class="btn btn-secondary btn-sm"
+                      @click="cancelInterview(itv.id)"
+                    >
+                      取消面试
+                    </button>
+                  </div>
+                  <InterviewFeedbackForm
+                    v-if="showFeedbackForm && feedbackTargetId === itv.id"
+                    :interview-id="itv.id"
+                    @cancel="closeFeedback"
+                    @success="onFeedbackSubmitted"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div v-else-if="isApplicant && interviews.length > 0" class="detail-section interview-section">
+              <div class="section-head">
+                <h3>📅 我的面试</h3>
+              </div>
+              <div class="interview-list">
+                <div v-for="itv in interviews" :key="itv.id" class="interview-item" :class="`itv-${itv.status}`">
+                  <div class="itv-head">
+                    <span class="itv-time">📅 {{ formatInterviewTime(itv.interviewTime) }}</span>
+                    <span class="tag" :class="`status-${itv.status}`">{{ itv.statusLabel }}</span>
+                  </div>
+                  <div class="itv-body">
+                    <div class="itv-row">
+                      <span class="itv-label">方式</span>
+                      <span>{{ itv.interviewTypeLabel }}</span>
+                    </div>
+                    <div class="itv-row">
+                      <span class="itv-label">面试官</span>
+                      <span>{{ itv.interviewer }}</span>
+                    </div>
+                    <div class="itv-row" v-if="itv.location">
+                      <span class="itv-label">地点</span>
+                      <span>{{ itv.location }}</span>
+                    </div>
+                    <div class="itv-row" v-if="itv.meetingLink">
+                      <span class="itv-label">会议链接</span>
+                      <a :href="itv.meetingLink" target="_blank" class="link">{{ itv.meetingLink }}</a>
+                    </div>
+                    <div class="itv-row" v-if="itv.note">
+                      <span class="itv-label">备注</span>
+                      <span class="itv-note">{{ itv.note }}</span>
+                    </div>
+                    <div class="itv-row" v-if="itv.feedbackResult">
+                      <span class="itv-label">反馈结果</span>
+                      <span class="tag" :class="feedbackClass(itv.feedbackResult)">{{ itv.feedbackResultLabel }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div v-else class="detail-section status-section">
               <h3>📌 状态说明</h3>
               <p class="section-desc">当前处理进度由招聘方更新，您可随时在此查看</p>
@@ -153,7 +284,10 @@ import { ref, inject, onMounted, onActivated, defineOptions, watch, nextTick, co
 import { useRoute } from 'vue-router'
 import StatusSelector from '../components/StatusSelector.vue'
 import MessageBoard from '../components/MessageBoard.vue'
-import { applicationApi } from '../services/api'
+import InterviewForm from '../components/InterviewForm.vue'
+import InterviewFeedbackForm from '../components/InterviewFeedbackForm.vue'
+import { applicationApi, interviewApi } from '../services/api'
+import { useNotifications } from '../composables/useNotifications'
 
 defineOptions({ name: 'ApplicationDetailView' })
 
@@ -161,6 +295,7 @@ const route = useRoute()
 const toast = inject('toast')
 const role = inject('role')
 const markRefreshed = inject('markRefreshed', () => {})
+const notifications = useNotifications()
 
 const isApplicant = computed(() => role?.isApplicant?.value || false)
 const canView = computed(() =>
@@ -168,6 +303,7 @@ const canView = computed(() =>
   isApplicant.value ||
   false
 )
+const canScheduleInterview = computed(() => role?.canScheduleInterview?.value || false)
 
 const app = ref({ skillTags: [] })
 const loading = ref(true)
@@ -175,6 +311,12 @@ const loadError = ref('')
 const currentStatus = ref('pending')
 const statusUpdating = ref(false)
 const msgCount = ref(-1)
+
+const showInterviewForm = ref(false)
+const showFeedbackForm = ref(false)
+const feedbackTargetId = ref('')
+const interviews = ref([])
+const interviewsLoading = ref(false)
 
 const statusLabels = {
   pending: '⏳ 待筛选',
@@ -200,6 +342,67 @@ function isStatusDone(s) {
   return sIdx < curIdx
 }
 
+function feedbackClass(r) {
+  if (r === 'pass') return 'status-pending'
+  if (r === 'pending') return 'status-contacted'
+  if (r === 'fail') return 'status-rejected'
+  return 'tag-blue'
+}
+
+function formatInterviewTime(ts) {
+  if (!ts) return ''
+  const d = new Date(ts)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+async function loadInterviews() {
+  if (!route.params.id) return
+  interviewsLoading.value = true
+  try {
+    const list = await interviewApi.list({ applicationId: route.params.id })
+    interviews.value = list
+  } catch (e) {
+    console.warn('加载面试记录失败:', e.message)
+  } finally {
+    interviewsLoading.value = false
+  }
+}
+
+function onInterviewScheduled() {
+  showInterviewForm.value = false
+  loadApp()
+  loadInterviews()
+  notifications.refresh()
+}
+
+function openFeedback(id) {
+  feedbackTargetId.value = id
+  showFeedbackForm.value = true
+}
+function closeFeedback() {
+  showFeedbackForm.value = false
+  feedbackTargetId.value = ''
+}
+
+function onFeedbackSubmitted() {
+  closeFeedback()
+  loadApp()
+  loadInterviews()
+  notifications.refresh()
+}
+
+async function cancelInterview(id) {
+  if (!confirm('确定取消该面试安排？')) return
+  try {
+    await interviewApi.cancel(id)
+    toast.success('面试已取消')
+    loadInterviews()
+    notifications.refresh()
+  } catch (e) {
+    toast.error('取消失败：' + e.message)
+  }
+}
+
 async function loadApp() {
   loading.value = true
   loadError.value = ''
@@ -209,6 +412,7 @@ async function loadApp() {
     currentStatus.value = data.status
     await nextTick()
     markRefreshed()
+    loadInterviews()
   } catch (e) {
     loadError.value = e.message
     toast.error('加载候选人详情失败：' + e.message)
@@ -656,5 +860,124 @@ onActivated(loadApp)
   width: 100%;
   max-width: 240px;
   margin: 0 auto;
+}
+
+.interview-section {
+  background: #fafbff;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 20px;
+  border: 1px solid #eef0f8;
+}
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.section-head h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  color: #555;
+}
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hint-text {
+  font-size: 12px;
+  color: #aaa;
+}
+.interviews-loading,
+.empty-sm {
+  text-align: center;
+  padding: 20px;
+  color: #999;
+  font-size: 13px;
+}
+.empty-sm {
+  background: #fff;
+  border-radius: 6px;
+  border: 1px dashed #e0e0e0;
+}
+.interview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+.interview-item {
+  background: #fff;
+  border-radius: 8px;
+  padding: 14px;
+  border: 1px solid #eef0f8;
+  transition: all 0.2s;
+}
+.interview-item.itv-completed {
+  border-color: #d9f7be;
+  background: #fcffe6;
+}
+.interview-item.itv-cancelled {
+  border-color: #ffd6d6;
+  background: #fff7f7;
+  opacity: 0.75;
+}
+.itv-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.itv-time {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1a1a2e;
+}
+.itv-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.itv-row {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  align-items: flex-start;
+}
+.itv-label {
+  width: 70px;
+  flex-shrink: 0;
+  color: #888;
+}
+.itv-note {
+  color: #666;
+  line-height: 1.5;
+}
+.feedback-text {
+  margin: 0;
+  background: #fafafa;
+  padding: 8px 12px;
+  border-radius: 4px;
+  line-height: 1.6;
+  color: #444;
+  font-size: 12px;
+  flex: 1;
+}
+.link {
+  color: #1890ff;
+  text-decoration: none;
+  word-break: break-all;
+}
+.link:hover { text-decoration: underline; }
+.itv-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed #eef0f8;
 }
 </style>

@@ -25,6 +25,9 @@
       </div>
     </aside>
     <main class="main-content">
+      <div class="top-bar">
+        <NotificationCenter />
+      </div>
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <keep-alive :include="keepAliveComponents">
@@ -42,11 +45,12 @@ import { ref, provide, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import ToastContainer from './components/ToastContainer.vue'
 import RoleSwitcher from './components/RoleSwitcher.vue'
+import NotificationCenter from './components/NotificationCenter.vue'
 import { useToast } from './composables/useToast'
 import { useRole } from './composables/useRole'
 
 const router = useRouter()
-const keepAliveComponents = ['DashboardView', 'JobListView', 'ApplicationListView']
+const keepAliveComponents = ['DashboardView', 'JobListView', 'ApplicationListView', 'InterviewListView']
 const toast = useToast()
 const lastRefresh = ref('')
 
@@ -86,27 +90,60 @@ const allNavItems = [
     permission: 'application:list',
     exact: false,
     defaultFor: []
+  },
+  {
+    path: '/interviews',
+    label: '我的面试',
+    icon: '📅',
+    permission: 'interview:list',
+    exact: false,
+    defaultFor: ['applicant'],
+    applicantOnly: true
+  },
+  {
+    path: '/interviews',
+    label: '面试安排',
+    icon: '📅',
+    permission: 'interview:list',
+    exact: false,
+    defaultFor: ['recruiter', 'manager'],
+    staffOnly: true
   }
 ]
 
 const visibleNavItems = computed(() => {
   const seen = new Set()
   return allNavItems.filter(item => {
-    if (seen.has(item.path)) return false
-    if (!role.hasPermission(item.permission)) return false
+    if (seen.has(item.path)) {
+      if (item.applicantOnly && !role.isApplicant.value) return false
+      if (item.staffOnly && role.isApplicant.value) return false
+    } else {
+      if (!role.hasPermission(item.permission)) return false
+    }
+    if (seen.has(item.path)) {
+      if (item.path === '/jobs') {
+        if (role.isApplicant.value) return item.label === '职位大厅'
+        return item.label === '职位管理'
+      }
+      if (item.path === '/interviews') {
+        if (role.isApplicant.value) return item.label === '我的面试'
+        return item.label === '面试安排'
+      }
+    }
     seen.add(item.path)
-    if (role.isApplicant.value && item.path === '/jobs') {
-      return item.label === '职位大厅'
-    }
-    if ((role.isRecruiter.value || role.isManager.value) && item.path === '/jobs') {
-      return item.label === '职位管理'
-    }
     return true
-  }).map(item => ({
-    ...item,
-    label: role.isApplicant.value && item.path === '/jobs' ? '职位大厅' : item.label,
-    icon: role.isApplicant.value && item.path === '/jobs' ? '🔍' : item.icon
-  }))
+  }).map(item => {
+    let label = item.label
+    let icon = item.icon
+    if (item.path === '/jobs') {
+      label = role.isApplicant.value ? '职位大厅' : '职位管理'
+      icon = role.isApplicant.value ? '🔍' : '💼'
+    }
+    if (item.path === '/interviews') {
+      label = role.isApplicant.value ? '我的面试' : '面试安排'
+    }
+    return { ...item, label, icon }
+  })
 })
 
 const defaultRoute = computed(() => {
@@ -230,8 +267,18 @@ body {
 
 .main-content {
   flex: 1;
-  padding: 24px;
+  padding: 0 24px 24px;
   overflow-y: auto;
+}
+.top-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 12px 0;
+  position: sticky;
+  top: 0;
+  background: #f0f2f5;
+  z-index: 10;
 }
 
 .btn {

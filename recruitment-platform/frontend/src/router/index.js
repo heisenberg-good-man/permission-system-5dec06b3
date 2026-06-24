@@ -51,6 +51,18 @@ const routes = [
     meta: { title: '投递详情' }
   },
   {
+    path: '/interviews',
+    name: 'interview-list',
+    component: () => import('../views/InterviewListView.vue'),
+    meta: { title: '面试安排' }
+  },
+  {
+    path: '/interviews/:id',
+    name: 'interview-detail',
+    component: () => import('../views/InterviewDetailView.vue'),
+    meta: { title: '面试详情' }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('../views/NotFoundView.vue'),

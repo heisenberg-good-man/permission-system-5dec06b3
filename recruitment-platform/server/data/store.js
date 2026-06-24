@@ -166,9 +166,108 @@ const messages = [
   }
 ]
 
+const interviews = [
+  {
+    id: 'int_1',
+    applicationId: 'app_3',
+    jobId: 'job_2',
+    applicantName: '张伟',
+    interviewTime: '2026-06-26T15:00:00.000Z',
+    interviewType: 'onsite',
+    interviewer: '技术总监陈工',
+    location: '北京市朝阳区星辰科技大厦A座15层会议室3',
+    meetingLink: '',
+    note: '请准备Go并发、微服务架构相关内容，面试约60分钟，含代码白板环节。',
+    status: 'scheduled',
+    feedbackResult: '',
+    feedbackContent: '',
+    feedbackAt: '',
+    createdAt: '2026-06-23T09:00:00.000Z',
+    updatedAt: '2026-06-23T09:00:00.000Z'
+  },
+  {
+    id: 'int_2',
+    applicationId: 'app_1',
+    jobId: 'job_1',
+    applicantName: '王明',
+    interviewTime: '2026-06-24T14:00:00.000Z',
+    interviewType: 'video',
+    interviewer: '前端组长刘工、HR李经理',
+    location: '',
+    meetingLink: 'https://meeting.example.com/join/abc123',
+    note: '视频初面，约45分钟，重点考察Vue3和工程化经验。',
+    status: 'scheduled',
+    feedbackResult: '',
+    feedbackContent: '',
+    feedbackAt: '',
+    createdAt: '2026-06-23T15:00:00.000Z',
+    updatedAt: '2026-06-23T15:00:00.000Z'
+  }
+]
+
+const notifications = [
+  {
+    id: 'notif_1',
+    targetRole: 'applicant',
+    targetName: '张伟',
+    type: 'interview_scheduled',
+    title: '面试已安排',
+    content: '您好，您投递的「后端开发工程师」岗位面试已安排在 2026-06-26 15:00，请准时参加。',
+    relatedId: 'int_1',
+    read: false,
+    createdAt: '2026-06-23T09:05:00.000Z'
+  },
+  {
+    id: 'notif_2',
+    targetRole: 'recruiter',
+    targetName: 'all',
+    type: 'new_application',
+    title: '新的投递',
+    content: '陈静 投递了「UI设计师」岗位，请及时查看。',
+    relatedId: 'app_5',
+    read: false,
+    createdAt: '2026-06-23T08:46:00.000Z'
+  },
+  {
+    id: 'notif_3',
+    targetRole: 'applicant',
+    targetName: '王明',
+    type: 'status_changed',
+    title: '状态更新',
+    content: '您投递的「高级前端工程师」岗位状态已更新为：已沟通。',
+    relatedId: 'app_1',
+    read: false,
+    createdAt: '2026-06-23T14:05:00.000Z'
+  },
+  {
+    id: 'notif_4',
+    targetRole: 'manager',
+    targetName: 'all',
+    type: 'status_changed',
+    title: '候选人状态更新',
+    content: '张伟（后端开发工程师）状态更新为：面试中。',
+    relatedId: 'app_3',
+    read: true,
+    createdAt: '2026-06-23T09:10:00.000Z'
+  },
+  {
+    id: 'notif_5',
+    targetRole: 'applicant',
+    targetName: '王明',
+    type: 'interview_scheduled',
+    title: '面试已安排',
+    content: '您好，您投递的「高级前端工程师」岗位视频面试已安排在 2026-06-24 14:00。',
+    relatedId: 'int_2',
+    read: false,
+    createdAt: '2026-06-23T15:05:00.000Z'
+  }
+]
+
 let jobIdCounter = jobs.length
 let appIdCounter = applications.length
 let msgIdCounter = messages.length
+let interviewIdCounter = interviews.length
+let notificationIdCounter = notifications.length
 
 function generateId(prefix, counter) {
   return `${prefix}_${counter + 1}`
@@ -178,7 +277,11 @@ module.exports = {
   jobs,
   applications,
   messages,
+  interviews,
+  notifications,
   get nextJobId() { jobIdCounter++; return `job_${jobIdCounter}` },
   get nextAppId() { appIdCounter++; return `app_${appIdCounter}` },
-  get nextMsgId() { msgIdCounter++; return `msg_${msgIdCounter}` }
+  get nextMsgId() { msgIdCounter++; return `msg_${msgIdCounter}` },
+  get nextInterviewId() { interviewIdCounter++; return `int_${interviewIdCounter}` },
+  get nextNotificationId() { notificationIdCounter++; return `notif_${notificationIdCounter}` }
 }
