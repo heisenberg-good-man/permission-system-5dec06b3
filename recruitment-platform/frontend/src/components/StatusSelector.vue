@@ -22,9 +22,10 @@
 </template>
 
 <script setup>
-defineProps({
+const props = defineProps({
   modelValue: { type: String, default: 'pending' },
-  showTip: { type: Boolean, default: false }
+  showTip: { type: Boolean, default: false },
+  showArrow: { type: Boolean, default: true }
 })
 
 const emit = defineEmits(['update:modelValue', 'change'])
