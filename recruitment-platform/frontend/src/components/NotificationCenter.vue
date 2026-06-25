@@ -1,5 +1,5 @@
 <template>
-  <div class="notif-center" v-click-outside="close">
+  <div class="notif-center" ref="containerRef">
     <button class="nc-trigger notif-bell-btn" @click="toggleOpen" :class="{ active: open }">
       <span class="nc-icon">🔔</span>
       <span v-if="unreadCount > 0" class="nc-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
@@ -49,7 +49,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onActivated, inject, defineDirective, nextTick } from 'vue'
+import { ref, onMounted, onActivated, onUnmounted, inject, nextTick } from 'vue'
 import { useNotifications } from '../composables/useNotifications'
 
 defineOptions({ name: 'NotificationCenter' })
@@ -60,6 +60,7 @@ const open = ref(false)
 const loading = ref(false)
 const list = ref([])
 const unreadCount = notifications.unreadCount
+const containerRef = ref(null)
 
 const TYPE_ICONS = {
   new_application: '📝',
@@ -118,25 +119,20 @@ function formatTime(ts) {
   return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-defineDirective('click-outside', {
-  mounted(el, binding) {
-    el.__vueClickOutside__ = function (e) {
-      if (!(el === e.target || el.contains(e.target))) {
-        binding.value && binding.value(e)
-      }
-    }
-    document.addEventListener('click', el.__vueClickOutside__)
-  },
-  unmounted(el) {
-    if (el.__vueClickOutside__) {
-      document.removeEventListener('click', el.__vueClickOutside__)
-      delete el.__vueClickOutside__
-    }
+function onClickOutside(e) {
+  if (open.value && containerRef.value && !containerRef.value.contains(e.target)) {
+    open.value = false
   }
-})
+}
 
-onMounted(() => { notifications.refresh() })
+onMounted(() => {
+  notifications.refresh()
+  document.addEventListener('click', onClickOutside, true)
+})
 onActivated(() => { notifications.refresh() })
+onUnmounted(() => {
+  document.removeEventListener('click', onClickOutside, true)
+})
 
 setInterval(() => { if (!open.value) notifications.refresh() }, 30000)
 </script>

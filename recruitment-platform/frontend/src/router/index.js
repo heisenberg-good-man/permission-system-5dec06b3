@@ -12,7 +12,7 @@ const routes = [
   {
     path: '/',
     name: 'home',
-    redirect: (to) => {
+    redirect: () => {
       try {
         const role = (localStorage.getItem('currentRole') || 'manager')
         if (role === 'applicant') return '/jobs'
