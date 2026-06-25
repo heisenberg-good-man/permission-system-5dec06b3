@@ -1,1 +1,1 @@
-{"pid": 5452, "cwd": "D:\\code-space\\coding-soler\\permission-system-5dec06b3\\recruitment-platform\\frontend", "command": ["D:\\dev-tools\\node-v22.22.3-win-x64\\npm.cmd", "run", "dev", "--", "--host", "127.0.0.1", "--port", "5173"], "created_at": 1782348659.8053312}
+{"pid": 120, "cwd": "D:\\code-space\\coding-soler\\permission-system-5dec06b3\\recruitment-platform\\frontend", "command": ["D:\\dev-tools\\node-v22.22.3-win-x64\\npm.cmd", "run", "dev", "--", "--host", "127.0.0.1", "--port", "5173"], "created_at": 1782349768.24129}

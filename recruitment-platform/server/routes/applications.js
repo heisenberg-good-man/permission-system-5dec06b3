@@ -43,7 +43,12 @@ router.get('/', (req, res) => {
   }
   const enriched = result.map(app => {
     const job = jobs.find(j => j.id === app.jobId)
-    return { ...app, jobTitle: job ? job.title : '', company: job ? job.company : '' }
+    return {
+      ...app,
+      jobTitle: job ? job.title : '',
+      company: app.company || (job ? job.company : ''),
+      targetPosition: app.targetPosition || (job ? job.title : '')
+    }
   })
   res.json(enriched)
 })
@@ -52,7 +57,12 @@ router.get('/:id', (req, res) => {
   const app = applications.find(a => a.id === req.params.id)
   if (!app) return res.status(404).json({ error: '投递记录不存在' })
   const job = jobs.find(j => j.id === app.jobId)
-  res.json({ ...app, jobTitle: job ? job.title : '', company: job ? job.company : '' })
+  res.json({
+    ...app,
+    jobTitle: job ? job.title : '',
+    company: app.company || (job ? job.company : ''),
+    targetPosition: app.targetPosition || (job ? job.title : '')
+  })
 })
 
 router.post('/', (req, res) => {
@@ -120,7 +130,12 @@ router.post('/', (req, res) => {
     relatedId: app.id
   })
 
-  res.status(201).json({ ...app, jobTitle: job.title, company: job.company })
+  res.status(201).json({
+    ...app,
+    jobTitle: job.title,
+    company: job.company,
+    targetPosition: app.targetPosition || job.title
+  })
 })
 
 router.patch('/:id/status', (req, res) => {

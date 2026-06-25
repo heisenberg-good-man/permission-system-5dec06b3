@@ -6,7 +6,8 @@ function enrichApp(app) {
   return {
     ...app,
     company: app.company || (job ? job.company : ''),
-    targetPosition: app.targetPosition || (job ? job.title : '')
+    targetPosition: app.targetPosition || (job ? job.title : ''),
+    jobTitle: job ? job.title : (app.targetPosition || '')
   }
 }
 
