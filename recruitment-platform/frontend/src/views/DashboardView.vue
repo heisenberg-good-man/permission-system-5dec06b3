@@ -126,20 +126,21 @@ import { ref, onMounted, onActivated, inject, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import StatsBar from '../components/StatsBar.vue'
 import { jobApi, applicationApi, statsApi } from '../services/api'
+import { useRole } from '../composables/useRole'
 
 defineOptions({ name: 'DashboardView' })
 
 const router = useRouter()
 const toast = inject('toast')
-const role = inject('role')
+const role = useRole()
 const markRefreshed = inject('markRefreshed', () => {})
 
-const isApplicant = computed(() => role?.isApplicant?.value || false)
-const isManager = computed(() => role?.isManager?.value || false)
-const canView = computed(() => isManager.value || role?.canViewDashboard?.value || false)
+const isApplicant = computed(() => role.isApplicant?.value || false)
+const isManager = computed(() => role.isManager?.value || false)
+const canView = computed(() => isManager.value || role.canViewDashboard?.value || false)
 
 function switchToManager() {
-  role?.switchToManager?.()
+  role.switchToManager?.()
   toast?.success?.('已切换到招聘负责人视角')
 }
 

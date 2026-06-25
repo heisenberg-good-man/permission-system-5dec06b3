@@ -84,13 +84,14 @@ import { ref, computed, onMounted, onActivated, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SearchFilter from '../components/SearchFilter.vue'
 import { jobApi } from '../services/api'
+import { useRole } from '../composables/useRole'
 
 defineOptions({ name: 'JobListView' })
 
 const route = useRoute()
 const router = useRouter()
 const toast = inject('toast')
-const role = inject('role')
+const role = useRole()
 
 const jobs = ref([])
 const loading = ref(false)

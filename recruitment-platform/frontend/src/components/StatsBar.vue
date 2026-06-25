@@ -83,6 +83,7 @@
 import { ref, onMounted, onActivated, inject, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { statsApi } from '../services/api'
+import { useRole } from '../composables/useRole'
 
 defineOptions({ name: 'StatsBar' })
 
@@ -95,7 +96,7 @@ const props = defineProps({
 
 const router = useRouter()
 const toast = inject('toast')
-const role = inject('role')
+const role = useRole()
 const markRefreshed = inject('markRefreshed', () => {})
 const emit = defineEmits(['updated'])
 

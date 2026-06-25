@@ -124,15 +124,16 @@ import { useRoute } from 'vue-router'
 import InterviewFeedbackForm from '../components/InterviewFeedbackForm.vue'
 import { interviewApi } from '../services/api'
 import { useNotifications } from '../composables/useNotifications'
+import { useRole } from '../composables/useRole'
 
 defineOptions({ name: 'InterviewDetailView' })
 
 const route = useRoute()
 const toast = inject('toast')
-const role = inject('role')
+const role = useRole()
 const notifications = useNotifications()
 
-const isApplicant = computed(() => role?.isApplicant?.value || false)
+const isApplicant = computed(() => role.isApplicant?.value || false)
 
 const statusLabels = {
   pending: '⏳ 待筛选',

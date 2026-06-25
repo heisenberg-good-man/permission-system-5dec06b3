@@ -106,22 +106,23 @@
 import { ref, inject, onMounted, onActivated, defineOptions, computed, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { interviewApi } from '../services/api'
+import { useRole } from '../composables/useRole'
 
 defineOptions({ name: 'InterviewListView' })
 
 const router = useRouter()
 const toast = inject('toast')
-const role = inject('role')
+const role = useRole()
 
-const isApplicant = computed(() => role?.isApplicant?.value || false)
+const isApplicant = computed(() => role.isApplicant?.value || false)
 const canView = computed(() =>
-  role?.canViewInterviews?.value ||
+  role.canViewInterviews?.value ||
   isApplicant.value ||
   false
 )
 
 function switchToRecruiter() {
-  role?.switchToRecruiter?.()
+  role.switchToRecruiter?.()
   toast?.success?.('已切换到招聘方视角')
 }
 

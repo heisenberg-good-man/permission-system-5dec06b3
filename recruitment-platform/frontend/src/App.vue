@@ -29,11 +29,11 @@
         <NotificationCenter />
       </div>
       <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <keep-alive :include="keepAliveComponents">
+        <keep-alive :include="keepAliveComponents">
+          <transition name="fade" mode="out-in">
             <component :is="Component" :key="$route.fullPath" />
-          </keep-alive>
-        </transition>
+          </transition>
+        </keep-alive>
       </router-view>
     </main>
     <ToastContainer />

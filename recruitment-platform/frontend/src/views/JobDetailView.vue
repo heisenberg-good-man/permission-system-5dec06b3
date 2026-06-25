@@ -151,17 +151,18 @@
 import { ref, onMounted, onActivated, inject, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { jobApi, applicationApi } from '../services/api'
+import { useRole } from '../composables/useRole'
 
 defineOptions({ name: 'JobDetailView' })
 
 const route = useRoute()
 const router = useRouter()
 const toast = inject('toast')
-const role = inject('role')
+const role = useRole()
 
-const isApplicant = computed(() => role?.isApplicant?.value || false)
-const canEdit = computed(() => role?.canEditJob?.value || false)
-const canApply = computed(() => role?.canApply?.value || false)
+const isApplicant = computed(() => role.isApplicant?.value || false)
+const canEdit = computed(() => role.canEditJob?.value || false)
+const canApply = computed(() => role.canApply?.value || false)
 const showSidebar = computed(() => !isApplicant.value)
 
 const job = ref(null)

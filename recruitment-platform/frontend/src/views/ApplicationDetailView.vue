@@ -288,22 +288,23 @@ import InterviewForm from '../components/InterviewForm.vue'
 import InterviewFeedbackForm from '../components/InterviewFeedbackForm.vue'
 import { applicationApi, interviewApi } from '../services/api'
 import { useNotifications } from '../composables/useNotifications'
+import { useRole } from '../composables/useRole'
 
 defineOptions({ name: 'ApplicationDetailView' })
 
 const route = useRoute()
 const toast = inject('toast')
-const role = inject('role')
+const role = useRole()
 const markRefreshed = inject('markRefreshed', () => {})
 const notifications = useNotifications()
 
-const isApplicant = computed(() => role?.isApplicant?.value || false)
+const isApplicant = computed(() => role.isApplicant?.value || false)
 const canView = computed(() =>
-  role?.canViewApplications?.value ||
+  role.canViewApplications?.value ||
   isApplicant.value ||
   false
 )
-const canScheduleInterview = computed(() => role?.canScheduleInterview?.value || false)
+const canScheduleInterview = computed(() => role.canScheduleInterview?.value || false)
 
 const app = ref({ skillTags: [] })
 const loading = ref(true)

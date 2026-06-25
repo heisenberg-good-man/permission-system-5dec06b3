@@ -95,19 +95,19 @@
 import { ref, computed, reactive, inject, onMounted, onActivated, defineOptions } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { jobApi, applicationApi } from '../services/api'
-import { ROLES } from '../composables/useRole'
+import { useRole, ROLES } from '../composables/useRole'
 
 defineOptions({ name: 'ApplicationFormView' })
 
 const route = useRoute()
 const router = useRouter()
 const toast = inject('toast')
-const role = inject('role')
+const role = useRole()
 
-const canApply = computed(() => role?.canApply?.value || false)
+const canApply = computed(() => role.canApply?.value || false)
 
 function switchToApplicant() {
-  if (role?.setRole) {
+  if (role.setRole) {
     role.setRole(ROLES.APPLICANT)
   }
 }

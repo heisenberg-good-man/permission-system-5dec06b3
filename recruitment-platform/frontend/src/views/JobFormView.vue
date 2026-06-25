@@ -108,19 +108,19 @@
 import { ref, reactive, onMounted, computed, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { jobApi } from '../services/api'
-import { ROLES } from '../composables/useRole'
+import { useRole, ROLES } from '../composables/useRole'
 
 defineOptions({ name: 'JobFormView' })
 
 const route = useRoute()
 const router = useRouter()
 const toast = inject('toast')
-const role = inject('role')
+const role = useRole()
 
-const canAccess = computed(() => (role?.canCreateJob?.value || role?.canEditJob?.value) || false)
+const canAccess = computed(() => (role.canCreateJob?.value || role.canEditJob?.value) || false)
 
 function switchToRecruiter() {
-  if (role?.setRole) {
+  if (role.setRole) {
     role.setRole(ROLES.RECRUITER)
   }
 }
